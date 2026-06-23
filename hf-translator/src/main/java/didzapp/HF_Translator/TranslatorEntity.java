@@ -11,14 +11,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.function.Function;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Version;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
-
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -26,11 +18,19 @@ import org.hibernate.StaleObjectStateException;
 import org.hibernate.Transaction;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.exception.LockAcquisitionException;
+import org.hibernate.query.MutationQuery;
 import org.hibernate.query.Query;
 
 import didzapp.LOGGER;
 import didzapp.HF_Translator.TranslatorContent.Translatable;
 import didzapp.HF_Translator.TranslatorResourcePaths.ToConfigFiles;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Version;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 
 /**
  * Represents a translation entity stored in the database. This class maps to a
@@ -284,10 +284,10 @@ public class TranslatorEntity {
 	 */
 	public static void deleteDuplicateTranslations() {
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
-			final String hql = "DELETE FROM " + TranslatorEntity.class //$NON-NLS-1$
-					.getSimpleName() + " e " + "WHERE e." + Column_id + " NOT IN (" + "   SELECT MAX(e2." + Column_id + ") " + "   FROM " + TranslatorEntity.class //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
+			final String hql = "DELETE FROM " + TranslatorEntity.class.getSimpleName() //$NON-NLS-1$
+					+ " e " + "WHERE e." + Column_id + " NOT IN (" + "   SELECT MAX(e2." + Column_id + ") " + "   FROM " + TranslatorEntity.class //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
 							.getSimpleName() + " e2 " + "   GROUP BY e2." + Column_modleCode + ", e2." + Column_StringIN + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-			final Query<?> query = hibernateSession.createQuery(hql);
+			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			final int deletedCount = query.executeUpdate();
 			LOGGER.log("Deleted Duplicate Translations: " + deletedCount); //$NON-NLS-1$
 			return null;
@@ -300,9 +300,9 @@ public class TranslatorEntity {
 	public static void deleteUnusedTranslations() {
 		final Timestamp removeTime = Timestamp.from(Instant.now().minus(360, ChronoUnit.DAYS));
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
-			final String hql = "DELETE FROM " + TranslatorEntity.class //$NON-NLS-1$
-					.getSimpleName() + " e WHERE e." + Column_LastUsed + " < :cutoff"; //$NON-NLS-1$ //$NON-NLS-2$
-			final Query<?> query = hibernateSession.createQuery(hql);
+			final String hql = "DELETE FROM " + TranslatorEntity.class.getSimpleName() //$NON-NLS-1$
+					+ " e WHERE e." + Column_LastUsed + " < :cutoff"; //$NON-NLS-1$ //$NON-NLS-2$
+			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			query.setParameter("cutoff", removeTime); //$NON-NLS-1$
 			final int deletedCount = query.executeUpdate();
 			LOGGER.log("Deleted Old Translations: " + deletedCount); //$NON-NLS-1$
@@ -316,7 +316,7 @@ public class TranslatorEntity {
 	public static void deleteAllTranslations() {
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 			final String hql = "DELETE FROM " + TranslatorEntity.class.getSimpleName(); //$NON-NLS-1$
-			final Query<?> query = hibernateSession.createQuery(hql);
+			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			final int deletedCount = query.executeUpdate();
 			LOGGER.log("Deleted All Translations: " + deletedCount); //$NON-NLS-1$
 			return null;
@@ -410,7 +410,7 @@ public class TranslatorEntity {
 		 */
 		static synchronized void dropTable(final Session hibernateSession, final String simpleTableName) {
 			final String sql = "DROP TABLE IF EXISTS " + simpleTableName; //$NON-NLS-1$
-			hibernateSession.createNativeQuery(sql).executeUpdate();
+			hibernateSession.createMutationQuery(sql).executeUpdate();
 			LOGGER.log("Table Deleted"); //$NON-NLS-1$
 		}
 

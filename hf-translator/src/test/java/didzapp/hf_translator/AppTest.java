@@ -1,111 +1,90 @@
 package didzapp.hf_translator;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.sql.Time;
 import java.util.Date;
 
+import org.junit.jupiter.api.Test;
+
 import didzapp.HF_Translator.Translator;
 import didzapp.HF_Translator.Translator.Language;
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
 /**
- * Unit test for simple App.
+ * Unit test for Translator library. Modern JUnit 5 test class - runs on Java 23
+ * without any legacy baggage.
  */
-public class AppTest extends TestCase {
-	/**
-	 * Create the test case
-	 *
-	 * @param testName name of the test case
-	 */
-	public AppTest(String testName) {
-		super(
-				testName);
-	}
-
-	/**
-	 * @return the suite of tests being tested
-	 */
-	public static Test suite() {
-		return new TestSuite(
-				AppTest.class);
-	}
-
-	/**
-	 * Rigorous Test :-)
-	 */
-	public static void testApp() {
-		// Optional: Force logger to also write to console (adjust to your LOGGER API)
-		// If LOGGER is your own class, add a setConsoleLogging(true) method.
-		// For now, we'll use System.out directly alongside LOGGER.
+public class AppTest {
+	@SuppressWarnings("static-method")
+	@Test
+	 void testAllLanguages() {
 		int testsPassed = 0;
 		int testsFailed = 0;
-		try {
-			for (Language l : Language.usableValues()) {
-				System.out.println("\n=== Testing Language: " + l + " ==="); //$NON-NLS-1$ //$NON-NLS-2$
+		for (Language l : Language.usableValues()) {
+			System.out.println("\n=== Testing Language: " + l + " ==="); //$NON-NLS-1$ //$NON-NLS-2$
+			try {
 				// 1. formatNumber
 				String formattedNum = Translator.formatNumber(l, Double.valueOf(100.100));
 				System.out.println("formatNumber(Double 100.100): " + formattedNum); //$NON-NLS-1$
-				assertNotNull(formattedNum);
+				assertNotNull(formattedNum, "formatNumber returned null for " + l); //$NON-NLS-1$
 				// 2. formatTimestamp
 				String formattedTs = Translator.formatTimestamp(l, Translator.quickTimestamp.timestamp());
 				System.out.println("formatTimestamp: " + formattedTs); //$NON-NLS-1$
-				assertNotNull(formattedTs);
+				assertNotNull(formattedTs, "formatTimestamp returned null for " + l); //$NON-NLS-1$
 				// 3. formatLocalDateTime
 				String formattedLdt = Translator.formatLocalDateTime(l, Translator.quickTimestamp.timestamp().toLocalDateTime());
 				System.out.println("formatLocalDateTime: " + formattedLdt); //$NON-NLS-1$
-				assertNotNull(formattedLdt);
+				assertNotNull(formattedLdt, "formatLocalDateTime returned null for " + l); //$NON-NLS-1$
 				// 4. formatTimestamp_MonthYear
 				String formattedMy = Translator.formatTimestamp_MonthYear(l, Translator.quickTimestamp.timestamp());
 				System.out.println("formatTimestamp_MonthYear: " + formattedMy); //$NON-NLS-1$
-				assertNotNull(formattedMy);
+				assertNotNull(formattedMy, "formatTimestamp_MonthYear returned null for " + l); //$NON-NLS-1$
 				// 5. formatDate
 				String formattedDate = Translator.formatDate(l, Translator.quickTimestamp.timestamp().toString());
 				System.out.println("formatDate: " + formattedDate); //$NON-NLS-1$
-				assertNotNull(formattedDate);
+				assertNotNull(formattedDate, "formatDate returned null for " + l); //$NON-NLS-1$
 				// 6. formatTime
 				String formattedTime = Translator.formatTime(l, Translator.quickTimestamp.timestamp().toString());
 				System.out.println("formatTime: " + formattedTime); //$NON-NLS-1$
-				assertNotNull(formattedTime);
+				assertNotNull(formattedTime, "formatTime returned null for " + l); //$NON-NLS-1$
 				// 7. formatCurrency
 				String formattedCurr = Translator.formatCurrency(l, "£100.10"); //$NON-NLS-1$
 				System.out.println("formatCurrency: " + formattedCurr); //$NON-NLS-1$
-				assertNotNull(formattedCurr);
+				assertNotNull(formattedCurr, "formatCurrency returned null for " + l); //$NON-NLS-1$
 				// 8. parseDate
 				Date parsedDate = Translator.parseDate(l, Translator.quickTimestamp.timestamp().toString());
 				System.out.println("parseDate: " + parsedDate); //$NON-NLS-1$
-				assertNotNull(parsedDate, "parseDate returned null"); //$NON-NLS-1$
-				// 9. parseTime – FIX: avoid .toString() on null
+				assertNotNull(parsedDate, "parseDate returned null for " + l); //$NON-NLS-1$
+				// 9. parseTime
 				String timeStr = Translator.quickTimestamp.timestamp().toLocalDateTime().toLocalTime().toString();
 				Time parsedTime = Translator.parseTime(l, timeStr);
 				System.out.println("parseTime input: " + timeStr); //$NON-NLS-1$
 				System.out.println("parseTime result: " + parsedTime); //$NON-NLS-1$
-				assertNotNull(parsedTime, "parseTime returned null for input: " + timeStr); //$NON-NLS-1$
+				assertNotNull(parsedTime, "parseTime returned null for input: " + timeStr + " on language: " + l); //$NON-NLS-1$ //$NON-NLS-2$
 				// 10. DeterminTimeOfDay
 				int timeOfDay = Translator.determinTimeOfDay(l);
 				System.out.println("DeterminTimeOfDay: " + timeOfDay); //$NON-NLS-1$
-				assertEquals(timeOfDay, timeOfDay);
+				// Ensure it returns a non-negative integer (basic sanity check)
+				if (timeOfDay < 0) {
+					throw new AssertionError(
+							"determinTimeOfDay returned negative value: " + timeOfDay); //$NON-NLS-1$
+				}
 				testsPassed++;
+				System.out.println("✅ Language " + l + " passed all tests."); //$NON-NLS-1$ //$NON-NLS-2$
+			} catch (Exception e) {
+				System.err.println("❌ Test failed for language " + l + " with exception: " + e.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
+				e.printStackTrace();
+				testsFailed++;
 			}
-		} catch (Exception e) {
-			System.err.println("Test failed with exception: " + e.getMessage()); //$NON-NLS-1$
-			e.printStackTrace();
-			testsFailed++;
 		}
+		// Summary
 		System.out.println("\n=== TEST SUMMARY ==="); //$NON-NLS-1$
 		System.out.println("Passed: " + testsPassed); //$NON-NLS-1$
 		System.out.println("Failed: " + testsFailed); //$NON-NLS-1$
-		// Fail the whole test if any failure occurred (for JUnit)
+		// Fail the whole test if any language failed
 		if (testsFailed > 0) {
-			fail("Some tests failed. See console output for details."); //$NON-NLS-1$
-		}
-	}
-
-// Helper assertion methods (if not using JUnit assertions)
-	private static void assertNotNull(Object obj, String message) {
-		if (obj == null) {
-			throw new AssertionError(
-					message);
+			fail("❌ " + testsFailed + " language(s) failed test execution. See console output for details."); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
 }

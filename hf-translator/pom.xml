@@ -20,51 +20,76 @@
 
 	<dependencies>
 
-		<!-- anotation support-->
+		<!-- ========================================================== -->
+		<!-- COMPILE SCOPE (Forced onto parent)                          -->
+		<!-- ========================================================== -->
+
+		<!-- JSON serialization - for Java 23 module support -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.13.3</version>
+			<version>2.18.2</version>
 		</dependency>
 
-		<!--language code mapping-->
+		<!-- Unicode/locale data - CLDR 47, requires Java 11+ -->
 		<dependency>
 			<groupId>com.ibm.icu</groupId>
 			<artifactId>icu4j</artifactId>
-			<version>74.2</version>
+			<version>76.1</version>
 		</dependency>
 
-		<!-- mariadb/hibernate database support-->
+		<!-- MariaDB JDBC Driver - for Java 23 TLS/security patches -->
 		<dependency>
-			<groupId>
-				org.hibernate</groupId>
-			<artifactId>hibernate-core</artifactId>
-			<version>5.6.12.Final</version>
-		</dependency>
-		<dependency>
-			<groupId> org.mariadb.jdbc</groupId>
+			<groupId>org.mariadb.jdbc</groupId>
 			<artifactId>mariadb-java-client</artifactId>
-			<version>3.1.3</version>
+			<version>3.5.1</version>
 		</dependency>
 
-		<!-- logging -->
+		<!-- Logging FACADE (API) - for Java 17+ -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
-			<artifactId>
-				slf4j-api</artifactId>
-			<version>1.7.32</version>
-		</dependency>
-		<dependency>
-			<groupId> ch.qos.logback</groupId>
-			<artifactId>logback-classic</artifactId>
-			<version>1.2.6</version>
+			<artifactId>slf4j-api</artifactId>
+			<version>2.0.16</version>
 		</dependency>
 
-		<!-- testing-->
+		<!-- ========================================================== -->
+		<!-- PROVIDED SCOPE (Borrowed from parent)                      -->
+		<!-- ========================================================== -->
+
+		<!-- Hibernate ORM - MANDATORY UPGRADE for Java 23 compatibility -->
 		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>3.8.1</version>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-core</artifactId>
+			<version>6.6.2.Final</version>
+			<scope>provided</scope>
+			<optional>true</optional>
+			<!-- WARNING: This drops Java 8/11 parent support entirely.          -->
+		</dependency>
+
+		<!-- ========================================================== -->
+		<!-- TEST SCOPE (Never leave your build machine)                -->
+		<!-- ========================================================== -->
+
+		<!-- Logging IMPLEMENTATION - for Java 23 -->
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.5.18</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- JUnit 5 - for Java 23 -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>5.12.0</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.platform</groupId>
+			<artifactId>junit-platform-launcher</artifactId>
+			<version>1.12.0</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -72,55 +97,61 @@
 
 	<build>
 		<finalName>hf-translator</finalName>
-		<plugins>
 
+		<plugins>
+			<!-- Compiler plugin - Lock to Java 17+ bytecode for broad
+			compatibility -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.5.1</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-						<configuration>
-							<!-- 1. Merge all 'resources' content -->
-							<transformers>
-								<!-- Merge standard resources -->
-								<transformer
-									implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-									<resource>**/*.xml</resource>
-									<resource>**/*.properties</resource>
-								</transformer>
-								<!-- Merge META-INF/services (for Java services) -->
-								<transformer
-									implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
-								<!-- Merge other META-INF resources -->
-								<transformer
-									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer" />
-							</transformers>
-							<!-- 2. Filter out unnecessary files from META-INF -->
-							<filters>
-								<filter>
-									<artifact>*:*</artifact>
-									<excludes>
-										<exclude>META-INF/*.SF</exclude>
-										<exclude>META-INF/*.DSA</exclude>
-										<exclude>META-INF/*.RSA</exclude>
-									</excludes>
-								</filter>
-							</filters>
-						</configuration>
-					</execution>
-				</executions>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.13.0</version>
+				<configuration>
+					<release>23</release>
+					<!-- Using -release 23 ensures your library runs on Java 17,
+					21, and 23.
+                     Since Hibernate 6.x and ICU4J 74+ require Java 11+, 23 is the safest LTS
+					target. -->
+					<compilerArgs>
+						<arg>-Xlint:all</arg>
+						<arg>-Werror</arg>
+					</compilerArgs>
+				</configuration>
 			</plugin>
 
-			<!-- Build the JAR (includes everything copied above) -->
+			<!-- JAR plugin - Creates a thin JAR with a proper MANIFEST -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
-				<version>3.3.0</version>
+				<version>3.4.2</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<!-- Optional: Adds your library version to the
+							manifest -->
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+							<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+
+			<!-- Surefire plugin - Runs your JUnit 5 tests during 'mvn test' -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.5.2</version>
+				<configuration>
+					<!-- JUnit 5 support -->
+					<includes>
+						<include>**/*Test.java</include>
+						<include>**/*Tests.java</include>
+					</includes>
+					<!-- If you have abstract test base classes, uncomment this:
+        			<excludes>
+      				      <exclude>**/Abstract*Test.java</exclude>
+       				 </excludes>
+       				 -->
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
