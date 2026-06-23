@@ -112,7 +112,8 @@
                      Since Hibernate 6.x and ICU4J 74+ require Java 11+, 23 is the safest LTS
 					target. -->
 					<compilerArgs>
-						<arg>-Xlint:all,-javadoc</arg>
+						<arg>-Xlint:all</arg>
+						<arg>-Xlint:-javadoc</arg>
 						<arg>-Werror</arg> 
 					</compilerArgs>
 				</configuration>
