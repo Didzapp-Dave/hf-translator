@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<appender name="CONSOLE"
+		class="ch.qos.logback.core.ConsoleAppender">
+		<encoder charset="UTF-8">
+			<pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<!--<root level="OFF"> -->
+	<root level="INFO">
+		<appender-ref ref="CONSOLE" />
+	</root>
+
+	<logger name="org.hibernate" level="OFF" />
+	<logger name="org.hibernate.SQL" level="OFF" />
+	<logger name="org.hibernate.type" level="OFF" />
+	<logger name="org.hibernate.tool.hbm2ddl" level="OFF" />
+	<logger name="org.hibernate.persister" level="OFF"></logger>
+	<logger name="org.hibernate.transaction" level="OFF" />
+
+</configuration>
