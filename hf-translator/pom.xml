@@ -21,7 +21,7 @@
 	<dependencies>
 
 		<!-- ========================================================== -->
-		<!-- COMPILE SCOPE (Forced onto parent)                          -->
+		<!-- COMPILE SCOPE (Forced onto parent)                         -->
 		<!-- ========================================================== -->
 
 		<!-- JSON serialization - for Java 23 module support -->
@@ -63,11 +63,11 @@
 			<version>6.6.2.Final</version>
 			<scope>provided</scope>
 			<optional>true</optional>
-			<!-- WARNING: This drops Java 8/11 parent support entirely.          -->
+			<!-- WARNING: This drops Java 8/11 parent support entirely. -->
 		</dependency>
 
 		<!-- ========================================================== -->
-		<!-- TEST SCOPE (Never leave your build machine)                -->
+		<!-- TEST SCOPE (Never leave build machine)                     -->
 		<!-- ========================================================== -->
 
 		<!-- Logging IMPLEMENTATION - for Java 23 -->
@@ -113,7 +113,7 @@
 					target. -->
 					<compilerArgs>
 						<arg>-Xlint:all</arg>
-						<arg>-Xlint:-javadoc</arg>
+						<arg>-Xlint:-dangling-doc-comments</arg>
 						<arg>-Werror</arg> 
 					</compilerArgs>
 				</configuration>
