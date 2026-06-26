@@ -95,6 +95,7 @@ public class Translator {
 	private static Process persistentProcess = null;
 	private static BufferedWriter persistentWriter = null;
 	private static BufferedReader persistentReader = null;
+	private static Thread thread ;
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Package
 	// Values
@@ -650,7 +651,7 @@ public class Translator {
 	 *         false otherwise
 	 */
 	public static boolean init(Language defaultLang, Language[] languages, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, Platform platform, boolean doFullTranslatorTest, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
-		return initWithContextAndXml(
+		return init(
 				null,
 				defaultLang,
 				languages,
@@ -712,7 +713,7 @@ public class Translator {
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
 	 */
-	public static boolean initWithContextAndXml(String libhiberbernate_CFG_XML_Path, Language defaultLang, Language[] languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, Platform platform, boolean doFullTranslatorTest, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(String libhiberbernate_CFG_XML_Path, Language defaultLang, Language[] languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, Platform platform, boolean doFullTranslatorTest, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
 		if (!runningMaintenance && doModels) {
 			//
 			runningMaintenance = true;
@@ -830,8 +831,8 @@ public class Translator {
 						if (instance instanceof Translatable translatable) {
 							translateStacker.add(translatable);
 						}
-					} catch (Exception e) {
-						LOGGER.log("Error While Determining If Object Is Translatable", e); //$NON-NLS-1$
+					} catch (Exception ignored) {
+						LOGGER.log("Error While Determining If Object Is Translatable", ignored,true); //$NON-NLS-1$
 					}
 				}
 			}
@@ -1305,20 +1306,21 @@ public class Translator {
 								new InputStreamReader(
 										persistentProcess.getInputStream(),
 										StandardCharsets.UTF_8));
-						new Thread(
+						thread = new Thread(
 								() -> {
 									try (BufferedReader err = new BufferedReader(
 											new InputStreamReader(
 													persistentProcess.getErrorStream(),
 													StandardCharsets.UTF_8))) {
 										String line;
-										while ((line = err.readLine()) != null) {
+										while (persistentProcess.isAlive()&&(line = err.readLine()) != null) {
 											LOGGER.log(line);
 										}
 									} catch (IOException ignored) {
 										LOGGER.log("LanguageDetector Failed At STDERR THREAD: ", ignored, true); //$NON-NLS-1$
 									}
-								}).start();
+								});
+						thread.start();
 					}
 				} catch (Exception e) {
 					LOGGER.log("Failed To Start Persistent Language Detector", e); //$NON-NLS-1$
@@ -1380,11 +1382,22 @@ public class Translator {
 			} catch (IOException ignored) {
 				LOGGER.log("Error Closing Persistent Reader: ", ignored, true); //$NON-NLS-1$
 			}
-			if (persistentProcess != null)
+			if (persistentProcess != null){
 				persistentProcess.destroyForcibly();
+			}
 			persistentProcess = null;
 			persistentWriter = null;
 			persistentReader = null;
+			if (thread != null && thread.isAlive()) {
+				try {
+					thread.interrupt();
+					thread.join();
+				} catch (InterruptedException ignored) {
+					Thread.currentThread().interrupt();
+					LOGGER.log("Error Closing Thread: ", ignored, true); //$NON-NLS-1$
+				}
+			}
+			thread = null;
 		}
 	}
 

@@ -51,6 +51,13 @@
 			<artifactId>slf4j-api</artifactId>
 			<version>2.0.16</version>
 		</dependency>
+		
+		<!-- Logging IMPLEMENTATION - for Java 23 -->
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.5.18</version>
+		</dependency>
 
 		<!-- ========================================================== -->
 		<!-- PROVIDED SCOPE (Borrowed from parent)                      -->
@@ -69,14 +76,6 @@
 		<!-- ========================================================== -->
 		<!-- TEST SCOPE (Never leave build machine)                     -->
 		<!-- ========================================================== -->
-
-		<!-- Logging IMPLEMENTATION - for Java 23 -->
-		<dependency>
-			<groupId>ch.qos.logback</groupId>
-			<artifactId>logback-classic</artifactId>
-			<version>1.5.18</version>
-			<scope>test</scope>
-		</dependency>
 
 		<!-- JUnit 5 - for Java 23 -->
 		<dependency>
