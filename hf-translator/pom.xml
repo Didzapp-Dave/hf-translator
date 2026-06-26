@@ -95,6 +95,7 @@
 
 	</dependencies>
 
+
 	<build>
 		<finalName>hf-translator</finalName>
 
@@ -114,7 +115,7 @@
 					<compilerArgs>
 						<arg>-Xlint:all</arg>
 						<arg>-Xlint:-dangling-doc-comments</arg>
-						<arg>-Werror</arg> 
+						<arg>-Werror</arg>
 					</compilerArgs>
 				</configuration>
 			</plugin>
@@ -156,4 +157,11 @@
 			</plugin>
 		</plugins>
 	</build>
+	<distributionManagement>
+		<repository>
+			<id>github</id>
+			<name>GitHub Didzapp-Dave Apache Maven Packages</name>
+			<url>https://maven.pkg.github.com/Didzapp-Dave/hf-translator</url>
+		</repository>
+	</distributionManagement>
 </project>
