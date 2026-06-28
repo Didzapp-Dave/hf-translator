@@ -59,18 +59,21 @@ Step 2 :  Use the Translator / detector (supported and selected languages only)
 
 
 
-//// Methods Paramaters ////
+2A. Methods Paramaters
 
+from:  Language enum representing the language being translated from 
+
+to:  Language enum representing the language being translated to
 
 input:  String or any object implementing Translator.Translatable (objects must @override .toString() to return value intended for translation)
 
-recreateTableEntry: ("true" or "false") : overwrites database entry
+recreateTableEntry:  ("true" or "false") : overwrites database entry
 
-doAsList: ("true" or "false") : process the whole list of strings in the model at once, or call the model once per string (very slow)
+doAsList:  ("true" or "false") : process the whole list of strings in the model at once, or call the model once per string (very slow)
 
 
 
-2A. Singular Text/Translatable objects
+2B. Singular Text/Translatable objects
 
 
 public static Language detectLanguage(final String input)
@@ -82,7 +85,7 @@ public static String translate(final Language from, final Language to, final Obj
 public static String translate(final Language from, final Language to, final Object input, final boolean recreateTableEntry)
 
 
-2B. Lists of texts/Translatable objects
+2C. Lists of texts/Translatable objects
 
 
 public static <T> Map<T, String> translate(final Language to, final List<T> inputs)
@@ -96,7 +99,7 @@ public static <T> Map<T, String> translate(final Language from, final Language t
 public static <T> Map<T, String> translate(final Language from, final Language to, final List<T> inputs, final boolean doAsList, final boolean recreateTableEntrys)
 
 
-2C. Singular and Lists of texts/Translatable objects (Model Only - No Database Lookup)  
+2D. Singular and Lists of texts/Translatable objects (Model Only - No Database Lookup)  
 
 
 public static String translate_OnlyUseModel(final Language to, final Object input)
