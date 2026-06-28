@@ -1,9 +1,6 @@
 How to use 'hf-translator' 
 
 
-Step 1 :  Init the Translator (returns a boolean)
-
-
 hibernate database default creds : 
 
 user - hf-translator
@@ -14,20 +11,14 @@ database name - hf-translator
 
 tables create themselves
 
-(FULL Translator.initWithContextAndXml) 
-
-(or drop the servlet context and cfg for quick init / offline testing) 
-
-(QUICK Translator.init)
 
 
+Step 1 :  Init the Translator (returns a boolean)
 
 
-if (Translator.initWithContextAndXml(
-
-servletContext,                                              (Servlet Context           : from main application)
+if (Translator.init(
 					
-libhiberbernate_CFG_XML_Path,                                (Your custom CFG file path : from main application)
+libhiberbernate_CFG_XML_Path,                                (Your custom CFG file path : from main application) (optional) 
 					
 Language.ENGLISH,                                            (OPTIONAL: Default language  /  null = English by default)
 					
@@ -66,17 +57,20 @@ classes)) {(Array[] of class files containing Translatable objects)
 Step 2 :  Use the Translator / detector (supported and selected languages only)
 
 
-//// KEY ////
+2A. Methods Paramaters
 
+from:  Language enum representing the language being translated from 
+
+to:  Language enum representing the language being translated to
 
 input:  String or any object implementing Translator.Translatable (objects must @override .toString() to return value intended for translation)
 
-recreateTableEntry: ("true" or "false") : overwrites database entry
+recreateTableEntry:  ("true" or "false") : overwrites database entry
 
-doAsList: ("true" or "false") : process the whole list of strings in the model at once, or call the model once per string (very slow)
+doAsList:  ("true" or "false") : process the whole list of strings in the model at once, or call the model once per string (very slow)
 
 
-////////////////// Singular Text/Translatable objects /////////////////
+2B. Singular Text/Translatable objects
 
 
 public static Language detectLanguage(final String input)
@@ -88,7 +82,7 @@ public static String translate(final Language from, final Language to, final Obj
 public static String translate(final Language from, final Language to, final Object input, final boolean recreateTableEntry)
 
 
-////////////////// Lists of texts/Translatable objects  /////////////////
+2C. Lists of texts/Translatable objects
 
 
 public static <T> Map<T, String> translate(final Language to, final List<T> inputs)
@@ -102,7 +96,7 @@ public static <T> Map<T, String> translate(final Language from, final Language t
 public static <T> Map<T, String> translate(final Language from, final Language to, final List<T> inputs, final boolean doAsList, final boolean recreateTableEntrys)
 
 
-////////////////// Singular and Lists of texts/Translatable objects (Model Only - No Database Lookup)  /////////////////
+2D. Singular and Lists of texts/Translatable objects (Model Only - No Database Lookup)  
 
 
 public static String translate_OnlyUseModel(final Language to, final Object input)
@@ -112,6 +106,45 @@ public static String translate_OnlyUseModel(final Language from, final Language 
 public static <T> Map<T, String> translate_OnlyUseModel(final Language to, final List<T> inputs)
 
 public static <T> Map<T, String> translate_OnlyUseModel(final Language from, final Language to, final List<T> inputs, final boolean doAsList)
+
+
+2E. Multiple Lists of texts/Translatable objects and single texts combined (same usage as the static methods, the boolean params are now setter methods)  
+
+  
+public static class TranslateStacker
+
+2E.a. Setters / Add content
+
+public void setReCreate(boolean reCreate)
+
+public void setProcessAsList(boolean doAsList)
+
+public TranslateStacker add(final String text)
+
+public TranslateStacker add(final Translatable text)
+
+public TranslateStacker addAll(final Translatable[] texts)
+
+public TranslateStacker addAll(final String[] texts) 
+
+2E.b. Translation methods (returns translated values)
+
+public <T> Map<T, String> translate(final Language to)
+
+public <T> Map<T, String> translate(final Language from, final Language to)
+
+public <T> Map<T, String> translate_ModelOnly(final Language to)
+
+public <T> Map<T, String> translate_ModelOnly(final Language from, final Language to)
+
+public <T> Map<T, String> translateAndFeedTranslatorDatabase(final Language to)
+
+public <T> Map<T, String> translateAndFeedTranslatorDatabase(final Language from, final Language to)
+
+2E.c. Translate and store in database for future translation, (no return values)
+
+public void feedTranslatorDatabase() 
+
 
 
 Step 3 :  Shutdown when your done .....  thats it ! ENJOY!     Thanks for looking at my project    :)
