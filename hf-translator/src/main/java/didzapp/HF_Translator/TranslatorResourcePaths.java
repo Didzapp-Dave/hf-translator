@@ -104,7 +104,7 @@ public class TranslatorResourcePaths {
 		public static final String translatePY = "/py/translate_ct2.py"; //$NON-NLS-1$
 		public static final String translatePYName = "translate_ct2"; //$NON-NLS-1$
 		//
-		public static final String conLID_Folder = "/py/ConLID"; //$NON-NLS-1$
+		public static final String conLID_Folder = "ConLID"; //$NON-NLS-1$
 		public static final String conLIDPY = "/py/detectLanguage_conLID.py"; //$NON-NLS-1$
 		public static final String conLIDPYName = "detectLanguage_conLID.py"; //$NON-NLS-1$
 	}

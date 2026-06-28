@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the following work."
+references:
+  - type: article
+    title: "ConLID: Supervised Contrastive Learning for Low-Resource Language Identification"
+    author:
+      - family: "Foroutan"
+        given: "Negar"
+      - family: "Saydaliev"
+        given: "Jakhongir"
+      - family: "Kim"
+        given: "Ye Eun"
+      - family: "Bosselut"
+        given: "Antoine"
+    journal: "arXiv preprint arXiv:2506.15304"
+    year: 2025

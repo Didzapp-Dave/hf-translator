@@ -1,0 +1,6 @@
+[submodule "resources/py/ConLID"]
+	path = resources/py/ConLID
+	url = https://github.com/epfl-nlp/ConLID.git
+[submodule "ConLID"]
+	path = ConLID
+	url = https://github.com/epfl-nlp/ConLID.git
