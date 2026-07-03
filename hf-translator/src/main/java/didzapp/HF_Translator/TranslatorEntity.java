@@ -21,7 +21,7 @@ import org.hibernate.exception.LockAcquisitionException;
 import org.hibernate.query.MutationQuery;
 import org.hibernate.query.Query;
 
-import didzapp.LOGGER;
+import didzapp.T_Log;
 import didzapp.HF_Translator.TranslatorContent.Translatable;
 import didzapp.HF_Translator.TranslatorResourcePaths.ToConfigFiles;
 import jakarta.persistence.Column;
@@ -134,11 +134,11 @@ public class TranslatorEntity {
 				} else {
 					hibernateSession.merge(this);
 				}
-				LOGGER.log("Entity Saved"); //$NON-NLS-1$
+				T_Log.log("Entity Saved"); //$NON-NLS-1$
 				return null;
 			}, 3);
 		} else {
-			LOGGER.log("Save Failed: Null Vars"); //$NON-NLS-1$
+			T_Log.log("Save Failed: Null Vars"); //$NON-NLS-1$
 		}
 	}
 
@@ -149,11 +149,11 @@ public class TranslatorEntity {
 		if (this.id != null) {
 			HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 				hibernateSession.remove(this);
-				LOGGER.log("Entity Deleted"); //$NON-NLS-1$
+				T_Log.log("Entity Deleted"); //$NON-NLS-1$
 				return null;
 			}, 3);
 		} else {
-			LOGGER.log("Delete Failed: No id / This Entity Was Never Saved"); //$NON-NLS-1$
+			T_Log.log("Delete Failed: No id / This Entity Was Never Saved"); //$NON-NLS-1$
 		}
 	}
 
@@ -167,7 +167,7 @@ public class TranslatorEntity {
 	public static TranslatorEntity getTranslation(final String id) {
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 			final TranslatorEntity entity = hibernateSession.get(TranslatorEntity.class, id);
-			LOGGER.log("Entity Found With id: " + id); //$NON-NLS-1$
+			T_Log.log("Entity Found With id: " + id); //$NON-NLS-1$
 			return entity;
 		}, 3);
 		return null;
@@ -229,7 +229,7 @@ public class TranslatorEntity {
 				.setStringIN((input instanceof String ? (String) input : input.toString()))
 				.setTranslation(translatedString)
 				.save();
-		LOGGER.log("Translation Added To Database"); //$NON-NLS-1$
+		T_Log.log("Translation Added To Database"); //$NON-NLS-1$
 	}
 
 	/**
@@ -242,9 +242,9 @@ public class TranslatorEntity {
 			final TranslatorEntity entity = hibernateSession.get(TranslatorEntity.class, id);
 			if (entity != null) {
 				hibernateSession.remove(entity);
-				LOGGER.log("Entity Deleted"); //$NON-NLS-1$
+				T_Log.log("Entity Deleted"); //$NON-NLS-1$
 			} else {
-				LOGGER.log("Delete Failed: No Entity Found"); //$NON-NLS-1$
+				T_Log.log("Delete Failed: No Entity Found"); //$NON-NLS-1$
 			}
 			return null;
 		}, 3);
@@ -288,7 +288,7 @@ public class TranslatorEntity {
 							.getSimpleName() + " e2 " + "   GROUP BY e2." + Column_modleCode + ", e2." + Column_StringIN + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			final int deletedCount = query.executeUpdate();
-			LOGGER.log("Deleted Duplicate Translations: " + deletedCount); //$NON-NLS-1$
+			T_Log.log("Deleted Duplicate Translations: " + deletedCount); //$NON-NLS-1$
 			return null;
 		}, 3);
 	}
@@ -304,7 +304,7 @@ public class TranslatorEntity {
 			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			query.setParameter("cutoff", removeTime); //$NON-NLS-1$
 			final int deletedCount = query.executeUpdate();
-			LOGGER.log("Deleted Old Translations: " + deletedCount); //$NON-NLS-1$
+			T_Log.log("Deleted Old Translations: " + deletedCount); //$NON-NLS-1$
 			return null;
 		}, 3);
 	}
@@ -317,7 +317,7 @@ public class TranslatorEntity {
 			final String hql = "DELETE FROM " + TranslatorEntity.class.getSimpleName(); //$NON-NLS-1$
 			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			final int deletedCount = query.executeUpdate();
-			LOGGER.log("Deleted All Translations: " + deletedCount); //$NON-NLS-1$
+			T_Log.log("Deleted All Translations: " + deletedCount); //$NON-NLS-1$
 			return null;
 		}, 3);
 	}
@@ -389,13 +389,13 @@ public class TranslatorEntity {
 				} else {
 					configuration.configure(cfg);
 				}
-				LOGGER.log("Initializing Hibernate Session Factory: " + TranslatorEntity.class.getName()); //$NON-NLS-1$
+				T_Log.log("Initializing Hibernate Session Factory: " + TranslatorEntity.class.getName()); //$NON-NLS-1$
 				configuration.addAnnotatedClass(TranslatorEntity.class);
 				final SessionFactory UniqueSessionFactory = configuration.buildSessionFactory();
-				LOGGER.log("Initialized successfully."); //$NON-NLS-1$
+				T_Log.log("Initialized successfully."); //$NON-NLS-1$
 				return UniqueSessionFactory;
 			} catch (ExceptionInInitializerError | Exception e) {
-				LOGGER.log("Error initializing Hibernate Session Factory: " + TranslatorEntity.class.getName(), e); //$NON-NLS-1$
+				T_Log.log("Error initializing Hibernate Session Factory: " + TranslatorEntity.class.getName(), e); //$NON-NLS-1$
 				return null;
 			}
 		}
@@ -410,7 +410,7 @@ public class TranslatorEntity {
 		static synchronized void dropTable(final Session hibernateSession, final String simpleTableName) {
 			final String sql = "DROP TABLE IF EXISTS " + simpleTableName; //$NON-NLS-1$
 			hibernateSession.createMutationQuery(sql).executeUpdate();
-			LOGGER.log("Table Deleted"); //$NON-NLS-1$
+			T_Log.log("Table Deleted"); //$NON-NLS-1$
 		}
 
 		/**
@@ -419,9 +419,9 @@ public class TranslatorEntity {
 		static synchronized void shutdown() {
 			try {
 				sessionFactory.close();
-				LOGGER.log("SessionFactories Shutdown"); //$NON-NLS-1$
+				T_Log.log("SessionFactories Shutdown"); //$NON-NLS-1$
 			} catch (final Exception e) {
-				LOGGER.log("Error During SessionFactorys Shutdown: ", e); //$NON-NLS-1$
+				T_Log.log("Error During SessionFactorys Shutdown: ", e); //$NON-NLS-1$
 			}
 			try {
 				boolean driverFound = false;
@@ -439,15 +439,15 @@ public class TranslatorEntity {
 					final ClassLoader cl = Thread.currentThread().getContextClassLoader();
 					if (targetDriver.getClass().getClassLoader() == cl) {
 						DriverManager.deregisterDriver(targetDriver);
-						LOGGER.log("Unregistered JDBC Driver: " + targetDriver); //$NON-NLS-1$
+						T_Log.log("Unregistered JDBC Driver: " + targetDriver); //$NON-NLS-1$
 					} else {
-						LOGGER.log("Driver Exists But Not Deregistered (Class Loader Mismatch)"); //$NON-NLS-1$
+						T_Log.log("Driver Exists But Not Deregistered (Class Loader Mismatch)"); //$NON-NLS-1$
 					}
 				} else {
-					LOGGER.log("MariaDB Driver Not Found – Nothing To Deregister"); //$NON-NLS-1$
+					T_Log.log("MariaDB Driver Not Found – Nothing To Deregister"); //$NON-NLS-1$
 				}
 			} catch (Exception e) {
-				LOGGER.log("Unexpected Error While Checking/Deregistering MariaDB Driver", e); //$NON-NLS-1$
+				T_Log.log("Unexpected Error While Checking/Deregistering MariaDB Driver", e); //$NON-NLS-1$
 			}
 		}
 
@@ -476,11 +476,11 @@ public class TranslatorEntity {
 							transaction.rollback();
 						}
 						if (e instanceof HibernateException) {
-							LOGGER.log(
+							T_Log.log(
 									"Hibernate Error During Transaction: ", //$NON-NLS-1$
 									e);
 						} else {
-							LOGGER.log(
+							T_Log.log(
 									"Unexpected Error During Transaction: ", //$NON-NLS-1$
 									e);
 						}
@@ -491,25 +491,25 @@ public class TranslatorEntity {
 						try {
 							transaction.rollback();
 						} catch (final Exception rollbackException) {
-							LOGGER.log(
+							T_Log.log(
 									"Error During Transaction Rollback", //$NON-NLS-1$
 									rollbackException);
 							throw rollbackException;
 						}
 					}
 					if (retryCount > maxRetries) {
-						LOGGER.log(
+						T_Log.log(
 								"Max Retries Reached For Optimistic Lock Conflict: ", //$NON-NLS-1$
 								e);
 						throw e;
 					}
-					LOGGER.log(
+					T_Log.log(
 							"Optimistic Locking Conflict Detected. Retrying... Attempt " + retryCount, //$NON-NLS-1$
 							e);
 					try {
 						Thread.sleep(retryCount * 100L);
 					} catch (final InterruptedException ie) {
-						LOGGER.log(
+						T_Log.log(
 								"Unexpected Error During Maintenance Thread Sleep: ", //$NON-NLS-1$
 								ie);
 						Thread.currentThread().interrupt();

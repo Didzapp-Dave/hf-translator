@@ -3,8 +3,8 @@ package didzapp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LOGGER {
-	static final Logger LOGGER = LoggerFactory.getLogger(LOGGER.class);
+public class T_Log {
+	static final Logger LOGGER = LoggerFactory.getLogger(T_Log.class);
 	public static boolean debug = false;
 	public static boolean testing = false;
 	public static boolean showCritical = false;

@@ -64,7 +64,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.icu.util.ULocale;
 
-import didzapp.LOGGER;
+import didzapp.T_Log;
 import didzapp.HF_Translator.TranslatorContent.FolderName;
 import didzapp.HF_Translator.TranslatorContent.TestContent;
 import didzapp.HF_Translator.TranslatorContent.Translatable;
@@ -553,7 +553,7 @@ public class Translator {
 			});
 			return true;
 		} catch (IOException e) {
-			LOGGER.log("Failed to delete Folder", e); //$NON-NLS-1$
+			T_Log.log("Failed to delete Folder", e); //$NON-NLS-1$
 			return false;
 		}
 	}
@@ -568,7 +568,7 @@ public class Translator {
 		try {
 			return Files.deleteIfExists(file);
 		} catch (IOException e) {
-			LOGGER.log("Failed to delete File", e); //$NON-NLS-1$
+			T_Log.log("Failed to delete File", e); //$NON-NLS-1$
 			return false;
 		}
 	}
@@ -588,17 +588,17 @@ public class Translator {
 				}
 				final boolean created = directory.mkdirs();
 				if (created) {
-					LOGGER.log("Created Directory: " + path); //$NON-NLS-1$
+					T_Log.log("Created Directory: " + path); //$NON-NLS-1$
 					return path;
 				}
-				LOGGER.log("Failed To Create Directory: " + path); //$NON-NLS-1$
+				T_Log.log("Failed To Create Directory: " + path); //$NON-NLS-1$
 			} catch (final SecurityException e) {
-				LOGGER.log("Permission Error While Creating Directory: " + path, e); //$NON-NLS-1$
+				T_Log.log("Permission Error While Creating Directory: " + path, e); //$NON-NLS-1$
 			} catch (final Exception e) {
-				LOGGER.log("Unexpected Error While Creating Directory: " + path, e); //$NON-NLS-1$
+				T_Log.log("Unexpected Error While Creating Directory: " + path, e); //$NON-NLS-1$
 			}
 		} else {
-			LOGGER.log("Invalid Or Empty Directory Path: " + path); //$NON-NLS-1$
+			T_Log.log("Invalid Or Empty Directory Path: " + path); //$NON-NLS-1$
 		}
 		return null;
 	}
@@ -722,10 +722,10 @@ public class Translator {
 			//
 			redoTranslationsInTable = redoTranslationsAndModelFiles;
 			universalTranslations = universalTranslationMode;
-			LOGGER.debug = debugMode;
-			LOGGER.testing = testingMode;
-			LOGGER.showCritical = showCriticalErrors;
-			LOGGER.showIgnored = showIgnoredErrors;
+			T_Log.debug = debugMode;
+			T_Log.testing = testingMode;
+			T_Log.showCritical = showCriticalErrors;
+			T_Log.showIgnored = showIgnoredErrors;
 			if (defaultLang != null) {
 				defaultLanguage = defaultLang;
 			}
@@ -782,7 +782,7 @@ public class Translator {
 			runningMaintenance = false;
 			//
 			//
-			LOGGER.log("Starting Language Detection Model..."); //$NON-NLS-1$
+			T_Log.log("Starting Language Detection Model..."); //$NON-NLS-1$
 			alwaysRunDetector = runLanguageDetectorService;
 			if (alwaysRunDetector) {
 				defaultLanguage = runLanguageDetectorService("Testing, testing, is this thing working?"); //$NON-NLS-1$
@@ -790,10 +790,10 @@ public class Translator {
 				defaultLanguage = runLanguageDetectorOneTime("Testing, testing, is this thing working?"); //$NON-NLS-1$
 			}
 			if (defaultLanguage == null || !defaultLanguage.equals(Language.ENGLISH)) {
-				LOGGER.log("Language Detection Not Working"); //$NON-NLS-1$
+				T_Log.log("Language Detection Not Working"); //$NON-NLS-1$
 				return false;
 			}
-			LOGGER.log("Language Detection Working"); //$NON-NLS-1$
+			T_Log.log("Language Detection Working"); //$NON-NLS-1$
 			//
 			devTesting_DoFullClassfileTest = doFullTranslatorTest;
 			if (testingMode && devTesting_DoFullClassfileTest) {
@@ -815,7 +815,7 @@ public class Translator {
 									translateStacker.add(translatable);
 								}
 							} catch (Exception e) {
-								LOGGER.log("Error While Determining If Object Is Translatable", e); //$NON-NLS-1$
+								T_Log.log("Error While Determining If Object Is Translatable", e); //$NON-NLS-1$
 							}
 						}
 					}
@@ -832,7 +832,7 @@ public class Translator {
 							translateStacker.add(translatable);
 						}
 					} catch (Exception ignored) {
-						LOGGER.log("Error While Determining If Object Is Translatable", ignored,true); //$NON-NLS-1$
+						T_Log.log("Error While Determining If Object Is Translatable", ignored,true); //$NON-NLS-1$
 					}
 				}
 			}
@@ -950,7 +950,7 @@ public class Translator {
 			String hashString = sha512(Files.readString(scriptFileGenerate.toPath(), StandardCharsets.UTF_8));
 			int count = 0;
 			while (!hashString.equals(hashFileGenerate)) {
-				LOGGER.log(ToPyFiles.generateModelPYName + " : Failed Hash Check"); //$NON-NLS-1$
+				T_Log.log(ToPyFiles.generateModelPYName + " : Failed Hash Check"); //$NON-NLS-1$
 				exportPYFiles();
 				count++;
 				if (count > 10) {
@@ -963,17 +963,17 @@ public class Translator {
 			if (Files.exists(modelBin)) {
 				if (redoTranslationsInTable) {
 					if (delete_Folder(outDir)) {
-						LOGGER.log(modelDir + "Model Already Exists, Deleting And Re-creating."); //$NON-NLS-1$
+						T_Log.log(modelDir + "Model Already Exists, Deleting And Re-creating."); //$NON-NLS-1$
 					} else {
-						LOGGER.log(modelDir + "Model Already Exists, Failed To Delete, Attempting Overwrite."); //$NON-NLS-1$
+						T_Log.log(modelDir + "Model Already Exists, Failed To Delete, Attempting Overwrite."); //$NON-NLS-1$
 					}
 				} else {
-					LOGGER.log("CTranslate2 Model Already Exists: " + modelBin); //$NON-NLS-1$
+					T_Log.log("CTranslate2 Model Already Exists: " + modelBin); //$NON-NLS-1$
 					return;
 				}
 			}
 			if (hashString.equals(hashFileGenerate)) {
-				LOGGER.log("CTranslate2 Model Missing. Generating Via Python..."); //$NON-NLS-1$
+				T_Log.log("CTranslate2 Model Missing. Generating Via Python..."); //$NON-NLS-1$
 				final ProcessBuilder pb = new ProcessBuilder(
 						ToPyFiles.pythonLang,
 						scriptFileGenerate.getAbsolutePath(),
@@ -985,16 +985,16 @@ public class Translator {
 				final Process p = pb.start();
 				final int exit = p.waitFor();
 				if (exit == 0) {
-					LOGGER.log("CTranslate2 Model Generated Successfully: " + modelBin); //$NON-NLS-1$
+					T_Log.log("CTranslate2 Model Generated Successfully: " + modelBin); //$NON-NLS-1$
 					downloadFlatpickerFile(langIN);
 					return;
 				}
-				LOGGER.log("Failed To Generate CTranslate2 Model, Deleting Model Folder,  Exit Code: " + exit); //$NON-NLS-1$
+				T_Log.log("Failed To Generate CTranslate2 Model, Deleting Model Folder,  Exit Code: " + exit); //$NON-NLS-1$
 				throw new Exception(
 						"EnsureCTranslate2 Failed, Throwing Error: Triggering Language Disable If Not In Universal Mode"); //$NON-NLS-1$
 			}
 		} catch (final Exception e) {
-			LOGGER.log("EnsureCTranslate2 Or Flatpicker Failed, Throwing Error: Triggering Language Disable", e); //$NON-NLS-1$
+			T_Log.log("EnsureCTranslate2 Or Flatpicker Failed, Throwing Error: Triggering Language Disable", e); //$NON-NLS-1$
 			throw e;
 		}
 	}
@@ -1013,7 +1013,7 @@ public class Translator {
 			String hashString = sha512(Files.readString(scriptFileTranslate.toPath(), StandardCharsets.UTF_8));
 			int count = 0;
 			while (!hashString.equals(hashFileTranslate)) {
-				LOGGER.log(ToPyFiles.translatePYName + " : Failed Hash Check"); //$NON-NLS-1$
+				T_Log.log(ToPyFiles.translatePYName + " : Failed Hash Check"); //$NON-NLS-1$
 				exportPYFiles();
 				count++;
 				if (count > 10) {
@@ -1057,7 +1057,7 @@ public class Translator {
 										output.append(line);
 									}
 								} catch (IOException e) {
-									LOGGER.log("CTranslate2 Translation Failed At STDOUT THREAD: ", e); //$NON-NLS-1$
+									T_Log.log("CTranslate2 Translation Failed At STDOUT THREAD: ", e); //$NON-NLS-1$
 								}
 							});
 					Thread stderrThread = new Thread(
@@ -1068,10 +1068,10 @@ public class Translator {
 												StandardCharsets.UTF_8))) {
 									String line;
 									while ((line = errReader.readLine()) != null) {
-										LOGGER.log(line);
+										T_Log.log(line);
 									}
 								} catch (IOException e) {
-									LOGGER.log("CTranslate2 Translation Failed At STDERR THREAD: ", e); //$NON-NLS-1$
+									T_Log.log("CTranslate2 Translation Failed At STDERR THREAD: ", e); //$NON-NLS-1$
 								}
 							});
 					stdoutThread.start();
@@ -1080,7 +1080,7 @@ public class Translator {
 					stderrThread.join();
 					final int exit = p.waitFor();
 					if (exit != 0) {
-						LOGGER.log("CTranslate2 Translation Failed, Exit Code: " + exit); //$NON-NLS-1$
+						T_Log.log("CTranslate2 Translation Failed, Exit Code: " + exit); //$NON-NLS-1$
 						return Collections.emptyList();
 					}
 					return new ObjectMapper().readValue(output.toString(), new TypeReference<List<String>>() {
@@ -1089,7 +1089,7 @@ public class Translator {
 			}
 			return Collections.emptyList();
 		} catch (final Exception e) {
-			LOGGER.log("Translation Error At PY File", e); //$NON-NLS-1$
+			T_Log.log("Translation Error At PY File", e); //$NON-NLS-1$
 			return Collections.emptyList();
 		}
 	}
@@ -1154,12 +1154,12 @@ public class Translator {
 								output.append(line);
 							}
 							while ((line = errReader.readLine()) != null) {
-								LOGGER.log(line);
+								T_Log.log(line);
 							}
 						}
 						final int exit = p.waitFor();
 						if (exit != 0) {
-							LOGGER.log("CTranslate2 Translation Failed, Exit Code: " + exit); //$NON-NLS-1$
+							T_Log.log("CTranslate2 Translation Failed, Exit Code: " + exit); //$NON-NLS-1$
 							return null;
 						}
 						return new BridgeContainer(
@@ -1184,7 +1184,7 @@ public class Translator {
 			String hashString = sha512(Files.readString(scriptFileDetectLanguage.toPath(), StandardCharsets.UTF_8));
 			int count = 0;
 			while (!hashString.equals(hashFileDetectLanguage)) {
-				LOGGER.log(ToPyFiles.conLIDPYName + " : Failed Hash Check"); //$NON-NLS-1$
+				T_Log.log(ToPyFiles.conLIDPYName + " : Failed Hash Check"); //$NON-NLS-1$
 				exportPYFiles();
 				count++;
 				if (count > 10) {
@@ -1212,7 +1212,7 @@ public class Translator {
 									output.append(line);
 								}
 							} catch (IOException e) {
-								LOGGER.log("LanguageDetector Failed At STDOUT THREAD: ", e); //$NON-NLS-1$
+								T_Log.log("LanguageDetector Failed At STDOUT THREAD: ", e); //$NON-NLS-1$
 							}
 						});
 				Thread stderrThread = new Thread(
@@ -1223,10 +1223,10 @@ public class Translator {
 											StandardCharsets.UTF_8))) {
 								String line;
 								while ((line = errReader.readLine()) != null) {
-									LOGGER.log(line);
+									T_Log.log(line);
 								}
 							} catch (IOException e) {
-								LOGGER.log("LanguageDetector Failed At STDERR THREAD: ", e); //$NON-NLS-1$
+								T_Log.log("LanguageDetector Failed At STDERR THREAD: ", e); //$NON-NLS-1$
 							}
 						});
 				stdoutThread.start();
@@ -1235,7 +1235,7 @@ public class Translator {
 				stderrThread.join();
 				final int exit = p.waitFor();
 				if (exit != 0) {
-					LOGGER.log("Language Detector Failed, Exit Code: " + exit); //$NON-NLS-1$
+					T_Log.log("Language Detector Failed, Exit Code: " + exit); //$NON-NLS-1$
 					return defaultLanguage;
 				}
 				JsonNode arr = new ObjectMapper().readTree(output.toString());
@@ -1262,7 +1262,7 @@ public class Translator {
 			}
 			return defaultLanguage;
 		} catch (final Exception e) {
-			LOGGER.log("Detection Error At PY File", e); //$NON-NLS-1$
+			T_Log.log("Detection Error At PY File", e); //$NON-NLS-1$
 			return defaultLanguage;
 		}
 	}
@@ -1282,7 +1282,7 @@ public class Translator {
 					String hashString = sha512(Files.readString(scriptFileDetectLanguage.toPath(), StandardCharsets.UTF_8));
 					int count = 0;
 					while (!hashString.equals(hashFileDetectLanguage)) {
-						LOGGER.log(ToPyFiles.conLIDPYName + " : Failed Hash Check"); //$NON-NLS-1$
+						T_Log.log(ToPyFiles.conLIDPYName + " : Failed Hash Check"); //$NON-NLS-1$
 						exportPYFiles();
 						count++;
 						if (count > 10) {
@@ -1314,16 +1314,16 @@ public class Translator {
 													StandardCharsets.UTF_8))) {
 										String line;
 										while (persistentProcess.isAlive()&&(line = err.readLine()) != null) {
-											LOGGER.log(line);
+											T_Log.log(line);
 										}
 									} catch (IOException ignored) {
-										LOGGER.log("LanguageDetector Failed At STDERR THREAD: ", ignored, true); //$NON-NLS-1$
+										T_Log.log("LanguageDetector Failed At STDERR THREAD: ", ignored, true); //$NON-NLS-1$
 									}
 								});
 						thread.start();
 					}
 				} catch (Exception e) {
-					LOGGER.log("Failed To Start Persistent Language Detector", e); //$NON-NLS-1$
+					T_Log.log("Failed To Start Persistent Language Detector", e); //$NON-NLS-1$
 					return null;
 				}
 			}
@@ -1363,7 +1363,7 @@ public class Translator {
 				return null;
 			}
 		} catch (Exception e) {
-			LOGGER.log("Detection Error At PY File", e); //$NON-NLS-1$
+			T_Log.log("Detection Error At PY File", e); //$NON-NLS-1$
 			return null;
 		}
 	}
@@ -1374,13 +1374,13 @@ public class Translator {
 				if (persistentWriter != null)
 					persistentWriter.close();
 			} catch (IOException ignored) {
-				LOGGER.log("Error Closing Persistent Writer: ", ignored, true); //$NON-NLS-1$
+				T_Log.log("Error Closing Persistent Writer: ", ignored, true); //$NON-NLS-1$
 			}
 			try {
 				if (persistentReader != null)
 					persistentReader.close();
 			} catch (IOException ignored) {
-				LOGGER.log("Error Closing Persistent Reader: ", ignored, true); //$NON-NLS-1$
+				T_Log.log("Error Closing Persistent Reader: ", ignored, true); //$NON-NLS-1$
 			}
 			if (persistentProcess != null){
 				persistentProcess.destroyForcibly();
@@ -1394,7 +1394,7 @@ public class Translator {
 					thread.join();
 				} catch (InterruptedException ignored) {
 					Thread.currentThread().interrupt();
-					LOGGER.log("Error Closing Thread: ", ignored, true); //$NON-NLS-1$
+					T_Log.log("Error Closing Thread: ", ignored, true); //$NON-NLS-1$
 				}
 			}
 			thread = null;
@@ -1445,10 +1445,10 @@ public class Translator {
 						ToPyFiles.conLIDPYName,
 						ToPyFiles.pythonSuffix);
 				hashFileDetectLanguage = sha512(Files.readString(scriptFileDetectLanguage.toPath(), StandardCharsets.UTF_8));
-				LOGGER.log(ToPyFiles.generateModelPYName + " And " + ToPyFiles.translatePYName + " Installed From Source Files"); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log(ToPyFiles.generateModelPYName + " And " + ToPyFiles.translatePYName + " Installed From Source Files"); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		} catch (final Exception e) {
-			LOGGER.log("Failed To Download Generate And Translate Python Files", e); //$NON-NLS-1$
+			T_Log.log("Failed To Download Generate And Translate Python Files", e); //$NON-NLS-1$
 		}
 	}
 
@@ -1458,7 +1458,7 @@ public class Translator {
 				try (InputStream in = clazz.getResourceAsStream(resourcePath)) {
 					return exportandReturnFile(in, saveToPath, resourcePath, fileName, suffix);
 				} catch (final Exception e) {
-					LOGGER.log("Failed To Extraxt Resource", e); //$NON-NLS-1$
+					T_Log.log("Failed To Extraxt Resource", e); //$NON-NLS-1$
 				}
 				return null;
 			}
@@ -1480,7 +1480,7 @@ public class Translator {
 						fos.write(buffer, 0, len);
 					}
 				}
-				LOGGER.log("Extracted Resource: " + resourcePath); //$NON-NLS-1$
+				T_Log.log("Extracted Resource: " + resourcePath); //$NON-NLS-1$
 				return file;
 			}
 
@@ -1488,12 +1488,12 @@ public class Translator {
 				try {
 					final URL folderUrl = clazz.getResource(resourceFolderPath);
 					if (resourceFolderPath == null) {
-						LOGGER.log("Resource Folder Not Found: " + resourceFolderPath); //$NON-NLS-1$
+						T_Log.log("Resource Folder Not Found: " + resourceFolderPath); //$NON-NLS-1$
 						return null;
 					}
 					return exportFolderAndReturnPath(folderUrl, saveToPath);
 				} catch (final Exception e) {
-					LOGGER.log("Failed To Extraxt Resource Folder", e); //$NON-NLS-1$
+					T_Log.log("Failed To Extraxt Resource Folder", e); //$NON-NLS-1$
 				}
 				return null;
 			}
@@ -1510,7 +1510,7 @@ public class Translator {
 						final File sourceFolder = new File(
 								folderUrl.toURI());
 						copyFileSystemFolder(sourceFolder, targetDir);
-						LOGGER.log("Extracted folder from filesystem: " + folderUrl); //$NON-NLS-1$
+						T_Log.log("Extracted folder from filesystem: " + folderUrl); //$NON-NLS-1$
 						return targetDir;
 					}
 					// Handle JAR case (production)
@@ -1543,13 +1543,13 @@ public class Translator {
 								}
 							}
 						}
-						LOGGER.log("Extracted folder from JAR: " + folderUrl.getPath()); //$NON-NLS-1$
+						T_Log.log("Extracted folder from JAR: " + folderUrl.getPath()); //$NON-NLS-1$
 						return targetDir;
 					}
-					LOGGER.log("Unsupported protocol: " + folderUrl.getProtocol()); //$NON-NLS-1$
+					T_Log.log("Unsupported protocol: " + folderUrl.getProtocol()); //$NON-NLS-1$
 					return null;
 				} catch (Exception e) {
-					LOGGER.log("Failed to extract folder", e); //$NON-NLS-1$
+					T_Log.log("Failed to extract folder", e); //$NON-NLS-1$
 					return null;
 				}
 			}
@@ -1598,7 +1598,7 @@ public class Translator {
 				hexString.append(hex);
 			}
 		} catch (final Exception e) {
-			LOGGER.log("Authentication Error", e); //$NON-NLS-1$
+			T_Log.log("Authentication Error", e); //$NON-NLS-1$
 		}
 		return hexString.toString();
 	}
@@ -1623,7 +1623,7 @@ public class Translator {
 					Path modelDir = getModelDir(false, lang1.getLocale().getLanguage(), lang2.getLocale().getLanguage());
 					try {
 						Files.createDirectories(modelDir);
-						LOGGER.log("Downloading Model: " + lang1 + "-" + lang2); //$NON-NLS-1$ //$NON-NLS-2$
+						T_Log.log("Downloading Model: " + lang1 + "-" + lang2); //$NON-NLS-1$ //$NON-NLS-2$
 						downloadModelFiles(client, modelDir, lang1, lang2);
 						defaultToCleintSuccess = true;
 						defaultLanguage.addToAvailableLanguages(lang2);
@@ -1631,20 +1631,20 @@ public class Translator {
 						if (!universalTranslations) {
 							lang2.usable = false;
 						}
-						LOGGER.log(
+						T_Log.log(
 								"Download Failed For " + lang1 + "-" + lang2 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 										.toAbsolutePath(),
 								e);
 						if (delete_Folder(modelDir)) {
-							LOGGER.log("Model Folder Deleted"); //$NON-NLS-1$
+							T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
 						} else {
-							LOGGER.log("Failed To Delete Model Folder"); //$NON-NLS-1$
+							T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
 						}
 					}
 					modelDir = getModelDir(false, lang2.getLocale().getLanguage(), lang1.getLocale().getLanguage());
 					try {
 						Files.createDirectories(modelDir);
-						LOGGER.log("Downloading Model: " + lang2 + "-" + lang1); //$NON-NLS-1$ //$NON-NLS-2$
+						T_Log.log("Downloading Model: " + lang2 + "-" + lang1); //$NON-NLS-1$ //$NON-NLS-2$
 						downloadModelFiles(client, modelDir, lang2, lang1);
 						if (defaultToCleintSuccess) {
 							lang2.usable = true;
@@ -1655,14 +1655,14 @@ public class Translator {
 						if (!universalTranslations) {
 							lang2.usable = false;
 						}
-						LOGGER.log(
+						T_Log.log(
 								"Download Failed For " + lang2 + "-" + lang1 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 										.toAbsolutePath(),
 								e);
 						if (delete_Folder(modelDir)) {
-							LOGGER.log("Model Folder Deleted"); //$NON-NLS-1$
+							T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
 						} else {
-							LOGGER.log("Failed To Delete Model Folder"); //$NON-NLS-1$
+							T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
 						}
 					}
 				}
@@ -1693,41 +1693,41 @@ public class Translator {
 						Path modelDir = getModelDir(false, lang2.getLocale().getLanguage(), lang3.getLocale().getLanguage());
 						try {
 							Files.createDirectories(modelDir);
-							LOGGER.log("Downloading Model: " + lang2 + "-" + lang3); //$NON-NLS-1$ //$NON-NLS-2$
+							T_Log.log("Downloading Model: " + lang2 + "-" + lang3); //$NON-NLS-1$ //$NON-NLS-2$
 							downloadModelFiles(client, modelDir, lang2, lang3);
 							lang2.addToAvailableLanguages(lang3);
 						} catch (final Exception e) {
 							if (!universalTranslations) {
 								lang3.usable = false;
 							}
-							LOGGER.log(
+							T_Log.log(
 									"Download Failed For " + lang2 + "-" + lang3 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 											.toAbsolutePath(),
 									e);
 							if (delete_Folder(modelDir)) {
-								LOGGER.log("Model Folder Deleted"); //$NON-NLS-1$
+								T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
 							} else {
-								LOGGER.log("Failed To Delete Model Folder"); //$NON-NLS-1$
+								T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
 							}
 						}
 						modelDir = getModelDir(false, lang3.getLocale().getLanguage(), lang2.getLocale().getLanguage());
 						try {
 							Files.createDirectories(modelDir);
-							LOGGER.log("Downloading Model: " + lang3 + "-" + lang2); //$NON-NLS-1$ //$NON-NLS-2$
+							T_Log.log("Downloading Model: " + lang3 + "-" + lang2); //$NON-NLS-1$ //$NON-NLS-2$
 							downloadModelFiles(client, modelDir, lang3, lang2);
 							lang3.addToAvailableLanguages(lang2);
 						} catch (final Exception e) {
 							if (!universalTranslations) {
 								lang3.usable = false;
 							}
-							LOGGER.log(
+							T_Log.log(
 									"Download Failed For " + lang3 + "-" + lang2 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 											.toAbsolutePath(),
 									e);
 							if (delete_Folder(modelDir)) {
-								LOGGER.log("Model Folder Deleted"); //$NON-NLS-1$
+								T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
 							} else {
-								LOGGER.log("Failed To Delete Model Folder"); //$NON-NLS-1$
+								T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
 							}
 						}
 					}
@@ -1756,31 +1756,31 @@ public class Translator {
 			if (Files.exists(outPath)) {
 				if (redoTranslationsInTable) {
 					if (delete_File(outPath)) {
-						LOGGER.log(file + "File Already Exists, Deleting And Re-Downloading."); //$NON-NLS-1$
+						T_Log.log(file + "File Already Exists, Deleting And Re-Downloading."); //$NON-NLS-1$
 					} else {
-						LOGGER.log(file + "File Already Exists, Failed To Delete, Attempting Overwrite."); //$NON-NLS-1$
+						T_Log.log(file + "File Already Exists, Failed To Delete, Attempting Overwrite."); //$NON-NLS-1$
 					}
 				} else {
-					LOGGER.log(file + " Already Exists, Skipping."); //$NON-NLS-1$
+					T_Log.log(file + " Already Exists, Skipping."); //$NON-NLS-1$
 					continue;
 				}
 			}
-			LOGGER.log("Downloading " + file); //$NON-NLS-1$
+			T_Log.log("Downloading " + file); //$NON-NLS-1$
 			try {
 				final String url = huggingURL(langIn, langOut, file);
-				LOGGER.log("Connecting To: " + url); //$NON-NLS-1$
+				T_Log.log("Connecting To: " + url); //$NON-NLS-1$
 				downloadFile(client, url, outPath);
 				if (!Files.exists(outPath)) {
-					LOGGER.log(file + "Invalid, File Not Saved"); //$NON-NLS-1$
+					T_Log.log(file + "Invalid, File Not Saved"); //$NON-NLS-1$
 					continue;
 				}
 				final String chk = readFileContents(outPath);
 				if (chk.isBlank() || chk.contains("Invalid username or password.") || chk.contains("Entry not found")) { //$NON-NLS-1$ //$NON-NLS-2$
-					LOGGER.log(file + " Is Empty / Invalid, Deleted"); //$NON-NLS-1$
+					T_Log.log(file + " Is Empty / Invalid, Deleted"); //$NON-NLS-1$
 					delete_File(outPath);
 					continue;
 				}
-				LOGGER.log("Download Complete. File stored at: " + outPath.toAbsolutePath()); //$NON-NLS-1$
+				T_Log.log("Download Complete. File stored at: " + outPath.toAbsolutePath()); //$NON-NLS-1$
 			} catch (final Exception e) {
 				delete_File(outPath);
 				throw e;
@@ -1831,12 +1831,12 @@ public class Translator {
 							client,
 							"https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/" + localeFile, //$NON-NLS-1$
 							baseDir.resolve(localeFile));
-					LOGGER.log("Flatpickr Downloaded For " + language.toString()); //$NON-NLS-1$
+					T_Log.log("Flatpickr Downloaded For " + language.toString()); //$NON-NLS-1$
 				} catch (URISyntaxException e) {
-					LOGGER.log("URISyntaxException While Downloading Flatpicker File", e); //$NON-NLS-1$
+					T_Log.log("URISyntaxException While Downloading Flatpicker File", e); //$NON-NLS-1$
 				}
 			} catch (IOException e) {
-				LOGGER.log("Flatpickr Downloaded Failed For " + language.toString(), e); //$NON-NLS-1$
+				T_Log.log("Flatpickr Downloaded Failed For " + language.toString(), e); //$NON-NLS-1$
 			}
 		}
 	}
@@ -1854,7 +1854,7 @@ public class Translator {
 	 */
 	private static void downloadFile(final HttpClient client, final String url, final Path destination) {
 		if (Files.exists(destination)) {
-			LOGGER.log("File already exists: " + destination.getFileName()); //$NON-NLS-1$
+			T_Log.log("File already exists: " + destination.getFileName()); //$NON-NLS-1$
 			return;
 		}
 		final HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).timeout(Duration.ofSeconds(30)).build();
@@ -1862,12 +1862,12 @@ public class Translator {
 			HttpResponse<Path> response = client.send(request, HttpResponse.BodyHandlers.ofFile(destination));
 			if (response.statusCode() != 200) {
 				delete_File(destination);
-				LOGGER.log("Download Failed: " + destination.getFileName()); //$NON-NLS-1$
+				T_Log.log("Download Failed: " + destination.getFileName()); //$NON-NLS-1$
 				return;
 			}
-			LOGGER.log("Downloaded: " + destination.getFileName()); //$NON-NLS-1$
+			T_Log.log("Downloaded: " + destination.getFileName()); //$NON-NLS-1$
 		} catch (IOException | InterruptedException e) {
-			LOGGER.log("Download Failed To Connect: " + destination.getFileName(), e); //$NON-NLS-1$
+			T_Log.log("Download Failed To Connect: " + destination.getFileName(), e); //$NON-NLS-1$
 		}
 	}
 
@@ -2114,7 +2114,7 @@ public class Translator {
 					this.redoTranslationsInTableStacker);
 			new Thread(
 					() -> {
-						LOGGER.log("Feeding Translator In New Thread"); //$NON-NLS-1$
+						T_Log.log("Feeding Translator In New Thread"); //$NON-NLS-1$
 						for (final Language l : languageInUseFirst(Language.usableValues(), to)) {
 							if ((!l.equals(getDefaultSystemLanguage()) && (!l.equals(to)))) {
 								Translator.translate(
@@ -2125,7 +2125,7 @@ public class Translator {
 										this.redoTranslationsInTableStacker);
 							}
 						}
-						LOGGER.log("Finished Feeding Translator, Thread Terminated"); //$NON-NLS-1$
+						T_Log.log("Finished Feeding Translator, Thread Terminated"); //$NON-NLS-1$
 					}).start();
 			return result;
 		}
@@ -2221,11 +2221,11 @@ public class Translator {
 	 */
 	public static String translate(final Language from, final Language to, final Object input, final boolean recreateTableEntry) {
 		if (input == null) {
-			LOGGER.log("Null At Translate"); //$NON-NLS-1$
+			T_Log.log("Null At Translate"); //$NON-NLS-1$
 			return null;
 		}
 		if (!(input instanceof String) && !(input instanceof Translatable)) {
-			LOGGER.log("Not Correct Input Type At Translate"); //$NON-NLS-1$
+			T_Log.log("Not Correct Input Type At Translate"); //$NON-NLS-1$
 			return null;
 		}
 		if (to.isUsable()) {
@@ -2250,7 +2250,7 @@ public class Translator {
 					}
 				}
 			} catch (final Exception e) {
-				LOGGER.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		}
 		return input.toString();
@@ -2379,7 +2379,7 @@ public class Translator {
 					return foundResults;
 				}
 			} catch (final Exception e) {
-				LOGGER.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		}
 		results = new LinkedHashMap<>();
@@ -2415,11 +2415,11 @@ public class Translator {
 	 */
 	public static String translate_OnlyUseModel(final Language from, final Language to, final Object input) {
 		if (input == null) {
-			LOGGER.log("Null At Translate"); //$NON-NLS-1$
+			T_Log.log("Null At Translate"); //$NON-NLS-1$
 			return null;
 		}
 		if (!(input instanceof String) && !(input instanceof Translatable)) {
-			LOGGER.log("Not Correct Input Type At Translate"); //$NON-NLS-1$
+			T_Log.log("Not Correct Input Type At Translate"); //$NON-NLS-1$
 			return null;
 		}
 		if (to.isUsable()) {
@@ -2440,7 +2440,7 @@ public class Translator {
 					}
 				}
 			} catch (final Exception e) {
-				LOGGER.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		}
 		return input.toString();
@@ -2504,7 +2504,7 @@ public class Translator {
 					}
 				}
 			} catch (final Exception e) {
-				LOGGER.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		}
 		results = new LinkedHashMap<>();
@@ -2560,7 +2560,7 @@ public class Translator {
 	 */
 	private static <T> tSearchResult<T> searchDatabase(final String modelCode, final List<T> inputs, final boolean redoTranslations) throws Exception {
 		if (inputs == null) {
-			LOGGER.log("Null At Database Search"); //$NON-NLS-1$
+			T_Log.log("Null At Database Search"); //$NON-NLS-1$
 			return null;
 		}
 		final Map<T, String> found = new LinkedHashMap<>();
@@ -2568,23 +2568,23 @@ public class Translator {
 		final List<?> list = inputs;
 		for (int i = 0; i < list.size(); i++) {
 			if (!(list.get(i) instanceof String) && !(list.get(i) instanceof Translatable)) {
-				LOGGER.log("Not Correct Input Type At Database Search, Removed"); //$NON-NLS-1$
+				T_Log.log("Not Correct Input Type At Database Search, Removed"); //$NON-NLS-1$
 				continue;
 			}
 			final String key = (list.get(i) instanceof String ? (String) list.get(i) : (list.get(i)).toString());
 			if (key.isBlank()) {
 				continue;
 			}
-			LOGGER.log("Searching Database For Listed Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
+			T_Log.log("Searching Database For Listed Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
 			final TranslatorEntity translated = TranslatorEntity.getTranslation(modelCode, key);
 			if (translated == null || translated.getTranslation() == null) {
 				missing.add(key);
 			} else if (redoTranslations) {
 				TranslatorEntity.delete(modelCode, key);
-				LOGGER.log("Deleted Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Deleted Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
 				missing.add(key);
 			} else {
-				LOGGER.log("Found Database Translation For Word/Phrase: " + modelCode + " : " + translated.getTranslation()); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Found Database Translation For Word/Phrase: " + modelCode + " : " + translated.getTranslation()); //$NON-NLS-1$ //$NON-NLS-2$
 				found.put(inputs.get(i), translated.getTranslation());
 			}
 		}
@@ -2606,15 +2606,15 @@ public class Translator {
 	 */
 	private static String searchDatabase(final String modelCode, final Object input, final boolean redoTranslations) throws Exception {
 		if (input == null) {
-			LOGGER.log("Null At Database Search"); //$NON-NLS-1$
+			T_Log.log("Null At Database Search"); //$NON-NLS-1$
 			return null;
 		}
 		if (!(input instanceof String) && !(input instanceof Translatable)) {
-			LOGGER.log("Not Correct Input Type At Database Search"); //$NON-NLS-1$
+			T_Log.log("Not Correct Input Type At Database Search"); //$NON-NLS-1$
 			return null;
 		}
 		final String key = (input instanceof String ? (String) input : (input).toString());
-		LOGGER.log("Searching Database For Single Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
+		T_Log.log("Searching Database For Single Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
 		if (key.isBlank()) {
 			return null;
 		}
@@ -2622,11 +2622,11 @@ public class Translator {
 		if (translated == null || translated.getTranslation() == null) {
 			return null;
 		} else if (redoTranslations) {
-			LOGGER.log("Deleted Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
+			T_Log.log("Deleted Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
 			TranslatorEntity.delete(modelCode, key);
 			return null;
 		}
-		LOGGER.log("Found Database Translation For Word/Phrase: " + modelCode + " : " + translated.getTranslation()); //$NON-NLS-1$ //$NON-NLS-2$
+		T_Log.log("Found Database Translation For Word/Phrase: " + modelCode + " : " + translated.getTranslation()); //$NON-NLS-1$ //$NON-NLS-2$
 		return translated.getTranslation();
 	}
 
@@ -2654,14 +2654,14 @@ public class Translator {
 			final List<T> chunkedList = chunk;
 			if (chunkedList.size() > 0) {
 				final String jsonInput = new ObjectMapper().writeValueAsString(chunkedList);
-				LOGGER.log("Translating List From Model: " + modelCode + " " + jsonInput); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Translating List From Model: " + modelCode + " " + jsonInput); //$NON-NLS-1$ //$NON-NLS-2$
 				final String encoded = Base64.getEncoder().encodeToString(jsonInput.getBytes(StandardCharsets.UTF_8));
 				final List<String> outputs = runCTranslate2(langIN, langOUT, encoded);
-				LOGGER.log("Translation Results: " + new ObjectMapper().writeValueAsString(outputs)); //$NON-NLS-1$
+				T_Log.log("Translation Results: " + new ObjectMapper().writeValueAsString(outputs)); //$NON-NLS-1$
 				if (outputs.size() == chunkedList.size()) {
 					for (int i = 0; i < chunkedList.size(); i++) {
 						if (!(chunkedList.get(i) instanceof String) && !(chunkedList.get(i) instanceof Translatable)) {
-							LOGGER.log("Not Correct Input Type At Do Translate, Removed"); //$NON-NLS-1$
+							T_Log.log("Not Correct Input Type At Do Translate, Removed"); //$NON-NLS-1$
 							continue;
 						}
 						final String key = appContentOrStringAsString(chunkedList.get(i));
@@ -2706,14 +2706,14 @@ public class Translator {
 			if (chunkedList.size() > 0) {
 				for (int i = 0; i < chunkedList.size(); i++) {
 					if (!(chunkedList.get(i) instanceof String) && !(chunkedList.get(i) instanceof Translatable)) {
-						LOGGER.log("Not Correct Input Type AtDo Translate, Removed"); //$NON-NLS-1$
+						T_Log.log("Not Correct Input Type AtDo Translate, Removed"); //$NON-NLS-1$
 						continue;
 					}
 					final String key = appContentOrStringAsString(chunkedList.get(i));
 					if (key.isBlank()) {
 						continue;
 					}
-					LOGGER.log("Translating String From Model: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
+					T_Log.log("Translating String From Model: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
 					final List<String> result = runCTranslate2(langIN, langOUT, key);
 					final String translatedFromModel = result.isEmpty() ? null : result.get(0);
 					if ((translatedFromModel == null) || translatedFromModel.isBlank()) {
@@ -2724,7 +2724,7 @@ public class Translator {
 						if (doTranslateion) {
 							TranslatorEntity.save(modelCode, key, formatted);
 						}
-						LOGGER.log("Translated Word/Phrase Output: " + modelCode + " : " + formatted); //$NON-NLS-1$ //$NON-NLS-2$
+						T_Log.log("Translated Word/Phrase Output: " + modelCode + " : " + formatted); //$NON-NLS-1$ //$NON-NLS-2$
 					}
 				}
 			}
@@ -2749,11 +2749,11 @@ public class Translator {
 	 */
 	private static String doOneString(final String langIN, final String langOUT, final String modelCode, final Object input, final boolean doTranslateion) throws Exception {
 		if (input == null) {
-			LOGGER.log("Null At Translate"); //$NON-NLS-1$
+			T_Log.log("Null At Translate"); //$NON-NLS-1$
 			return null;
 		}
 		if (!(input instanceof String) && !(input instanceof Translatable)) {
-			LOGGER.log("Not Correct Input Type At Translate"); //$NON-NLS-1$
+			T_Log.log("Not Correct Input Type At Translate"); //$NON-NLS-1$
 			return null;
 		}
 		final String key = appContentOrStringAsString(input);
@@ -2761,7 +2761,7 @@ public class Translator {
 			return null;
 		}
 		String placeheld = key;
-		LOGGER.log("Translating String From Model: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
+		T_Log.log("Translating String From Model: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
 		final List<String> result = runCTranslate2(langIN, langOUT, placeheld);
 		final String translatedFromModel = result.isEmpty() ? null : result.get(0);
 		if ((translatedFromModel != null) && !translatedFromModel.isBlank()) {
@@ -2769,7 +2769,7 @@ public class Translator {
 			if (doTranslateion) {
 				TranslatorEntity.save(modelCode, key, formatted);
 			}
-			LOGGER.log("Translated Word/Phrase From Model: " + modelCode + " : " + formatted); //$NON-NLS-1$ //$NON-NLS-2$
+			T_Log.log("Translated Word/Phrase From Model: " + modelCode + " : " + formatted); //$NON-NLS-1$ //$NON-NLS-2$
 			return formatted;
 		}
 		return "Model_Translation_Failed"; //$NON-NLS-1$
@@ -2936,7 +2936,7 @@ public class Translator {
 				localDate = LocalDate.parse(datePart, DateTimeFormatter.ofPattern(format));
 				return localDate.format(outputFormatter);
 			} catch (DateTimeParseException e) {
-				LOGGER.log("Parse Failed, Continuing", e, true); //$NON-NLS-1$
+				T_Log.log("Parse Failed, Continuing", e, true); //$NON-NLS-1$
 			}
 		}
 		return null;
@@ -2978,7 +2978,7 @@ public class Translator {
 				localTime = LocalTime.parse(timePart, DateTimeFormatter.ofPattern(format));
 				return localTime.format(outputFormatter);
 			} catch (DateTimeParseException e) {
-				LOGGER.log("Parse Failed, Continuing", e, true); //$NON-NLS-1$
+				T_Log.log("Parse Failed, Continuing", e, true); //$NON-NLS-1$
 			}
 		}
 		return null;
@@ -3057,10 +3057,10 @@ public class Translator {
 			try {
 				return sdf.parse(datePart);
 			} catch (final ParseException e) {
-				LOGGER.log("Parse Failed, Continuing", e, true); //$NON-NLS-1$
+				T_Log.log("Parse Failed, Continuing", e, true); //$NON-NLS-1$
 			}
 		}
-		LOGGER.log("Parse Error: Unable to parse date: " + dateString); //$NON-NLS-1$
+		T_Log.log("Parse Error: Unable to parse date: " + dateString); //$NON-NLS-1$
 		return null;
 	}
 
@@ -3074,7 +3074,7 @@ public class Translator {
 	 */
 	public static Time parseTime(final Language language, String timeStr) {
 		if (timeStr == null || timeStr.isBlank()) {
-			LOGGER.log("Null or empty time string"); //$NON-NLS-1$
+			T_Log.log("Null or empty time string"); //$NON-NLS-1$
 			return null;
 		}
 		// Extract the time part (after space or 'T')
@@ -3097,7 +3097,7 @@ public class Translator {
 				.trim()
 				.toUpperCase();
 		if (cleaned.isEmpty() || !cleaned.matches(".*\\d.*")) { //$NON-NLS-1$
-			LOGGER.log("No time digits found in: " + timeStr); //$NON-NLS-1$
+			T_Log.log("No time digits found in: " + timeStr); //$NON-NLS-1$
 			return null;
 		}
 		List<DateTimeFormatter> formatters = buildLocaleAwareFormatters(language);
@@ -3118,10 +3118,10 @@ public class Translator {
 					return Time.valueOf(lt);
 				}
 			} catch (DateTimeException ignored) {
-				LOGGER.log("Time Parse Error", ignored, true); //$NON-NLS-1$
+				T_Log.log("Time Parse Error", ignored, true); //$NON-NLS-1$
 			}
 		}
-		LOGGER.log("Could not parse time: " + cleaned + " (original: " + timeStr + ")"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		T_Log.log("Could not parse time: " + cleaned + " (original: " + timeStr + ")"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 		return null;
 	}
 
@@ -3207,13 +3207,13 @@ public class Translator {
 				}
 				i++;
 				//
-				LOGGER.log(Translator.translate(l, TestContent.Hello));
-				LOGGER.log(Translator.translate(l, TestContent.Hello.toString()));
+				T_Log.log(Translator.translate(l, TestContent.Hello));
+				T_Log.log(Translator.translate(l, TestContent.Hello.toString()));
 				//
-				LOGGER.log(
+				T_Log.log(
 						Translator.translate(l, Arrays.asList(new Translatable[] { TestContent.Hello, TestContent.Hello }))
 								.toString());
-				LOGGER.log(
+				T_Log.log(
 						Translator
 								.translate(
 										l,
@@ -3221,16 +3221,16 @@ public class Translator {
 												new String[] { TestContent.Hello.toString(), TestContent.Hello.toString() }))
 								.toString());
 				//
-				LOGGER.log(Translator.translate_OnlyUseModel(l, TestContent.Hello));
-				LOGGER.log(Translator.translate_OnlyUseModel(l, TestContent.Hello.toString()));
+				T_Log.log(Translator.translate_OnlyUseModel(l, TestContent.Hello));
+				T_Log.log(Translator.translate_OnlyUseModel(l, TestContent.Hello.toString()));
 				//
-				LOGGER.log(
+				T_Log.log(
 						Translator
 								.translate_OnlyUseModel(
 										l,
 										Arrays.asList(new Translatable[] { TestContent.Hello, TestContent.Hello }))
 								.toString());
-				LOGGER.log(
+				T_Log.log(
 						Translator
 								.translate_OnlyUseModel(
 										l,
@@ -3242,50 +3242,50 @@ public class Translator {
 				//
 				tester.setProcessAsList(false);
 				t = tester.translate(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				tester.setProcessAsList(true);
 				t = tester.translate(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				tester.setProcessAsList(false);
 				t = tester.translate_ModelOnly(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				tester.setProcessAsList(true);
 				t = tester.translate_ModelOnly(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				tester.setProcessAsList(false);
 				t = tester.translateAndFeedTranslatorDatabase(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				tester.setProcessAsList(true);
 				t = tester.translateAndFeedTranslatorDatabase(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				//
 				//
 				tester.setReCreate(true);
 				//
 				tester.setProcessAsList(false);
 				t = tester.translate(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				tester.setProcessAsList(true);
 				t = tester.translate(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				tester.setProcessAsList(false);
 				t = tester.translate_ModelOnly(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				tester.setProcessAsList(true);
 				t = tester.translate_ModelOnly(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				tester.setProcessAsList(false);
 				t = tester.translateAndFeedTranslatorDatabase(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				tester.setProcessAsList(true);
 				t = tester.translateAndFeedTranslatorDatabase(l);
-				LOGGER.log(t.toString());
+				T_Log.log(t.toString());
 				//
 				tester.setReCreate(false);
 			}
-			LOGGER.log("Test Complete"); //$NON-NLS-1$
+			T_Log.log("Test Complete"); //$NON-NLS-1$
 		} catch (Exception e) {
-			LOGGER.log("Test Failed", e); //$NON-NLS-1$
+			T_Log.log("Test Failed", e); //$NON-NLS-1$
 			return false;
 		}
 		return true;

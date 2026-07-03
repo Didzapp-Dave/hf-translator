@@ -5,7 +5,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
-import didzapp.LOGGER;
+import didzapp.T_Log;
 import didzapp.HF_Translator.Translator.Language;
 
 /**
@@ -60,7 +60,7 @@ public class TranslatorResourcePaths {
 					try {
 						fontFiles.add(((String) field.get(null)).split("/")[1]); //$NON-NLS-1$
 					} catch (IllegalAccessException e) {
-						LOGGER.log("Font Collection Error", e); //$NON-NLS-1$
+						T_Log.log("Font Collection Error", e); //$NON-NLS-1$
 					}
 				}
 			}
@@ -104,7 +104,7 @@ public class TranslatorResourcePaths {
 		public static final String translatePY = "/py/translate_ct2.py"; //$NON-NLS-1$
 		public static final String translatePYName = "translate_ct2"; //$NON-NLS-1$
 		//
-		public static final String conLID_Folder = "ConLID"; //$NON-NLS-1$
+		public static final String conLID_Folder = "/py/ConLID"; //$NON-NLS-1$
 		public static final String conLIDPY = "/py/detectLanguage_conLID.py"; //$NON-NLS-1$
 		public static final String conLIDPYName = "detectLanguage_conLID.py"; //$NON-NLS-1$
 	}
