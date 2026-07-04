@@ -625,7 +625,10 @@ public class Translator {
 	 * @param redoTranslationsAndModelFiles If true, re-downloads all model files,
 	 *                                      remakes models and re-translates all
 	 *                                      content
-	 * 
+	 * @param feedContentToDatabase         If true, 
+	 *                                      translates or checks availability for all
+	 *                                      content in contentClasses
+	 *                                      
 	 * @param platform                      Platform application is going to run on
 	 * @param doFullTranslatorTest          Full test on all translate methods, 3
 	 *                                      times over (uses 3 available languages,
@@ -650,7 +653,7 @@ public class Translator {
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
 	 */
-	public static boolean init(Language defaultLang, Language[] languages, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, Platform platform, boolean doFullTranslatorTest, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(Language defaultLang, Language[] languages, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, boolean feedContentToDatabase,Platform platform, boolean doFullTranslatorTest, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
 		return init(
 				null,
 				defaultLang,
@@ -658,6 +661,7 @@ public class Translator {
 				runLanguageDetectorService,
 				universalTranslationMode,
 				redoTranslationsAndModelFiles,
+				feedContentToDatabase,
 				platform,
 				doFullTranslatorTest,
 				debugMode,
@@ -691,6 +695,10 @@ public class Translator {
 	 * @param redoTranslationsAndModelFiles If true, re-downloads all model files,
 	 *                                      remakes models and re-translates all
 	 *                                      content
+	 *                                      
+     * @param feedContentToDatabase         If true, 
+	 *                                      translates or checks availability for all
+	 *                                      content in contentClasses
 	 * 
 	 * @param debugMode                     Enables detailed logging during
 	 * @param testingMode                   Enables test-specific logging or
@@ -713,7 +721,7 @@ public class Translator {
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
 	 */
-	public static boolean init(String libhiberbernate_CFG_XML_Path, Language defaultLang, Language[] languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, Platform platform, boolean doFullTranslatorTest, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(String libhiberbernate_CFG_XML_Path, Language defaultLang, Language[] languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles,boolean feedContentToDatabase, Platform platform, boolean doFullTranslatorTest, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
 		if (!runningMaintenance && doModels) {
 			//
 			runningMaintenance = true;
@@ -801,6 +809,7 @@ public class Translator {
 					return false;
 				}
 			}
+			if(feedContentToDatabase){
 			final TranslateStacker translateStacker = new TranslateStacker();
 			if (contentClasses != null && contentClasses.length > 0) {
 				for (Class<?> clazz : contentClasses) {
@@ -837,6 +846,7 @@ public class Translator {
 				}
 			}
 			translateStacker.feedTranslatorDatabase();
+			}
 			return true;
 		}
 		return false;
