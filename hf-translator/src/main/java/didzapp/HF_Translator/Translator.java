@@ -845,6 +845,9 @@ public class Translator {
 					}
 				}
 			}
+			for(String s : Language.stringValues()){
+				translateStacker.add(s);
+			}
 			translateStacker.feedTranslatorDatabase();
 			}
 			return true;
