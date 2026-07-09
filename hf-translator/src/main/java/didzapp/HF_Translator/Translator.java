@@ -1342,7 +1342,6 @@ public class Translator {
 						if (!universalTranslations) {
 							disabledLanguages.add(lang2);
 						}
-						
 						final Path outDir = modelDir.resolve(ToPyFiles.generatedModelFolder);
 						final Path modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
 						if (!Files.exists(modelBin)) {
@@ -1380,7 +1379,6 @@ public class Translator {
 							if (!universalTranslations) {
 								disabledLanguages.add(lang2);
 							}
-							
 							final Path outDir = modelDir.resolve(ToPyFiles.generatedModelFolder);
 							final Path modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
 							if (!Files.exists(modelBin)) {
