@@ -50,6 +50,7 @@ import java.util.Comparator;
 import java.util.Currency;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -98,7 +99,7 @@ public class Translator {
 	static String modelPath = null;
 	static String sharedPathString = null;
 	static String mainPathString = null;
-	static String tempPathString = "/temp_files"; //$NON-NLS-1$
+	static final String tempPathString = "/temp_files"; //$NON-NLS-1$
 	static String siteOrAppId = "hf-translator"; //$NON-NLS-1$
 	static Platform platformRuningOn = null;
 	//
@@ -118,9 +119,11 @@ public class Translator {
 	// Default language
 	static Locale defaultLanguage;
 	// Working languages
-	static List<Locale> disabledLanguages;
+	static List<Locale> disabledLanguages = new ArrayList<>();
 	// Selected languages
-	static List<Locale> selectedLanguages;
+	static List<Locale> selectedLanguages = new ArrayList<>();
+	// Languages Links
+	static Map<Locale, List<Locale>> languagesLinks = new HashMap<>();
 
 	/**
 	 * Gets the working languages as locales.
@@ -173,9 +176,7 @@ public class Translator {
 				.toArray(String[]::new);
 	}
 
-	// Languages Links
-	static Map<Locale, List<Locale>> languagesLinks;
-	//
+	
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Public
 	// Values
 
@@ -831,7 +832,7 @@ public class Translator {
 	 */
 	private static BridgeContainer bridgeLanguages(Locale langIN, Locale langOUT, String input) throws Exception {
 		for (Locale langBridge : languagesLinks.get(langIN)) {
-			if (languagesLinks.get(langBridge).contains(langOUT)) {
+			if (languagesLinks.get(langBridge)!=null &&languagesLinks.get(langBridge).contains(langOUT)) {
 				Path modelDir = getModelDir(true, langIN, langBridge);
 				if (modelDir.toFile().exists()) {
 					if (input != null && !input.isBlank()) {
@@ -1327,60 +1328,77 @@ public class Translator {
 			boolean defaultToCleintSuccess = false;
 			if ((!lang.equals(lang2)) && (!lang.getLanguage().equals(lang2.getLanguage()))) {
 				try (HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()) {
-											Path modelDir = getModelDir(false, lang, lang2);
-
+					Path modelDir = getModelDir(false, lang, lang2);
 					try {
 						Files.createDirectories(modelDir);
 						T_Log.log("Downloading Model: " + lang + "-" + lang2); //$NON-NLS-1$ //$NON-NLS-2$
 						downloadModelFiles(client, modelDir, lang, lang2);
 						defaultToCleintSuccess = true;
+						if (languagesLinks.get(lang) == null) {
+							languagesLinks.put(lang, new ArrayList<>());
+						}
 						languagesLinks.get(lang).add(lang2);
-						
-						
-						
-						
-						
 					} catch (final Exception e) {
 						if (!universalTranslations) {
-								disabledLanguages.add(lang2);
-							}
-						T_Log.log(
+							disabledLanguages.add(lang2);
+						}
+						
+						final Path outDir = modelDir.resolve(ToPyFiles.generatedModelFolder);
+						final Path modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
+						if (!Files.exists(modelBin)) {
+							T_Log.log(
 								"Download Failed For " + lang + "-" + lang2 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 										.toAbsolutePath(),
 								e);
-						if (delete_Folder(modelDir)) {
-							T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
-						} else {
-							T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
-						}
+							if (delete_Folder(modelDir)) {
+								
+								T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
+							} else {
+								T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
+							}
+						}else{
+								T_Log.log(
+									"Download Failed For " + lang2 + "-" + lang + ". Model Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+											.toAbsolutePath(),
+									e);
+							}
 					}
-					
-					
 					if (defaultToCleintSuccess) {
-					try {
-							 modelDir = getModelDir(false, lang2, lang);
-						Files.createDirectories(modelDir);
+						try {
+							modelDir = getModelDir(false, lang2, lang);
+							Files.createDirectories(modelDir);
 							T_Log.log("Downloading Model: " + lang2 + "-" + lang); //$NON-NLS-1$ //$NON-NLS-2$
 							downloadModelFiles(client, modelDir, lang2, lang);
-							languagesLinks.get(lang2).add(lang);
-								
-							
-							if (firstCall && universalTranslations) {
-								downloadFilesAndCreateModels(lang2,false);
+							if (languagesLinks.get(lang2) == null) {
+								languagesLinks.put(lang2, new ArrayList<>());
 							}
-							
+							languagesLinks.get(lang2).add(lang);
+							if (firstCall && universalTranslations) {
+								downloadFilesAndCreateModels(lang2, false);
+							}
 						} catch (final Exception e) {
 							if (!universalTranslations) {
 								disabledLanguages.add(lang2);
 							}
-							T_Log.log(
+							
+							final Path outDir = modelDir.resolve(ToPyFiles.generatedModelFolder);
+							final Path modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
+							if (!Files.exists(modelBin)) {
+								T_Log.log(
 									"Download Failed For " + lang2 + "-" + lang + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 											.toAbsolutePath(),
 									e);
-							if (delete_Folder(modelDir)) {
-								T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
-							} else {
-								T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
+								if (delete_Folder(modelDir)) {
+									T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
+								} else {
+									T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
+								}
+							}
+							else{
+								T_Log.log(
+									"Download Failed For " + lang2 + "-" + lang + ". Model Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+											.toAbsolutePath(),
+									e);
 							}
 						}
 					}
@@ -2800,7 +2818,7 @@ public class Translator {
 		T_Log.log("Could not parse time: " + cleaned + " (original: " + timeStr + ")"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 		return null;
 	}
-	
+
 	/**
 	 * Builds a list of locale-aware DateTimeFormatters for parsing times.
 	 *
@@ -2833,26 +2851,23 @@ public class Translator {
 		return formatters;
 	}
 
-	
-		/**
-		 * Determines the time of day based on current system time in the specified
-		 * language's zone.
-		 *
-		 * @param language The language whose time zone will be used.
-		 * @return An integer representing the time of day: 0 for morning, 1 for
-		 *         afternoon, 2 for evening.
-		 */
-		public static int determinTimeOfDay(final Locale language, ZoneId zoneId) {
-			final ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId); 
-			final LocalTime now = zonedDateTime.toLocalTime();
-			if (now.isBefore(LocalTime.NOON)) {
-				return 0;
-			}
-			if (now.isBefore(LocalTime.of(18, 0))) {
-				return 1;
-			}
-			return 2;
+	/**
+	 * Determines the time of day based on current system time in the specified
+	 * language's zone.
+	 *
+	 * @param language The language whose time zone will be used.
+	 * @return An integer representing the time of day: 0 for morning, 1 for
+	 *         afternoon, 2 for evening.
+	 */
+	public static int determinTimeOfDay(final Locale language, ZoneId zoneId) {
+		final ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId);
+		final LocalTime now = zonedDateTime.toLocalTime();
+		if (now.isBefore(LocalTime.NOON)) {
+			return 0;
 		}
-
-
+		if (now.isBefore(LocalTime.of(18, 0))) {
+			return 1;
+		}
+		return 2;
+	}
 }
