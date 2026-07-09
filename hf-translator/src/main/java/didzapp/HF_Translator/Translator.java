@@ -1860,7 +1860,7 @@ public class Translator {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
 				}
-				if (!langIN.equals(to)) {
+				if (!langIN.getLanguage().equals(to.getLanguage())) {
 					final String modelCode = langIN.getLanguage() + "-" + to.getLanguage(); //$NON-NLS-1$
 					final String translatedFromDatabase = searchDatabase(modelCode, input, recreateTableEntry);
 					if (translatedFromDatabase != null) {
@@ -1975,7 +1975,7 @@ public class Translator {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
 				}
-				if (!langIN.equals(to)) {
+				if (!langIN.getLanguage().equals(to.getLanguage())) {
 					final String modelCode = langIN.getLanguage() + "-" + to.getLanguage(); //$NON-NLS-1$
 					final tSearchResult<T> tSearchResult = searchDatabase(modelCode, inputs, recreateTableEntrys);
 					if (tSearchResult.missing.isEmpty()) {
@@ -2056,7 +2056,7 @@ public class Translator {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
 				}
-				if (!langIN.equals(to)) {
+				if (!langIN.getLanguage().equals(to.getLanguage())) {
 					final String modelCode = langIN.getLanguage() + "-" + to.getLanguage(); //$NON-NLS-1$
 					final String translatedFromModele = doOneString(langIN, to, modelCode, input, false);
 					if (translatedFromModele != null) {
@@ -2115,7 +2115,7 @@ public class Translator {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
 				}
-				if (!langIN.equals(to)) {
+				if (!langIN.getLanguage().equals(to.getLanguage())) {
 					final String modelCode = langIN.getLanguage() + "-" + to.getLanguage(); //$NON-NLS-1$
 					if (doAsList) {
 						results = doAsList(langIN, to, modelCode, inputs, false);
