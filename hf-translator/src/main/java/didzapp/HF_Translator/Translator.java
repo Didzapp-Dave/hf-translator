@@ -123,7 +123,7 @@ public class Translator {
 	static List<Locale> selectedLanguages;
 
 	/**
-	 * Gets the working languages.
+	 * Gets the working languages as locales.
 	 *
 	 * @return all languages if universal translations is enabled, otherwise all
 	 *         languages except the disabled ones.
@@ -138,7 +138,7 @@ public class Translator {
 	}
 	
 	/**
-	 * Gets the working language tags.
+	 * Gets the working language tags as strings.
 	 *
 	 * @return all languages if universal translations is enabled, otherwise all
 	 *         languages except the disabled ones.
@@ -147,33 +147,32 @@ public class Translator {
 		if (universalTranslations) {
 			return Arrays.stream(Locale.getAvailableLocales())
         .map(Locale::toLanguageTag)
-        .toArray(String[]::new);
+					.toArray(String[]::new);
 		}
 		return selectedLanguages.stream()
-        .filter(locale -> !disabledLanguages.contains(locale))
-        .map(Locale::toLanguageTag)
-        .toArray(String[]::new);
+				.filter(locale -> !disabledLanguages.contains(locale))
+				.map(Locale::toLanguageTag)
+				.toArray(String[]::new);
 	}
-	
-	
+
+	/**
+	 * Gets the working language names as strings.
+	 *
+	 * @return all languages if universal translations is enabled, otherwise all
+	 *         languages except the disabled ones.
+	 */
 	public static String[] getWorkingLanguageNames(Locale displayLocale) {
-    if (universalTranslations) {
-        return Arrays.stream(Locale.getAvailableLocales())
-                .map(locale -> locale.getDisplayName(displayLocale))
-                .toArray(String[]::new);
-    }
+		if (universalTranslations) {
+			return Arrays.stream(Locale.getAvailableLocales())
+					.map(locale -> locale.getDisplayName(displayLocale))
+					.toArray(String[]::new);
+		}
+		return selectedLanguages.stream()
+				.filter(locale -> !disabledLanguages.contains(locale))
+				.map(locale -> locale.getDisplayName(displayLocale))
+				.toArray(String[]::new);
+	}
 
-    return selectedLanguages.stream()
-            .filter(locale -> !disabledLanguages.contains(locale))
-                            .map(locale -> locale.getDisplayName(displayLocale))
-
-            .toArray(String[]::new);
-}
-	
-	
-
-	
-	
 	// Languages Links
 	static Map<Locale, List<Locale>> languagesLinks;
 	//
