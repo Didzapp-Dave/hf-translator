@@ -62,6 +62,7 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ibm.icu.util.ULocale;
 
 import didzapp.T_Log;
 import didzapp.HF_Translator.TranslatorContent.FolderName;
@@ -71,7 +72,6 @@ import didzapp.HF_Translator.TranslatorResourcePaths.ToFlatpickr;
 import didzapp.HF_Translator.TranslatorResourcePaths.ToPyFiles;
 
 public class Translator {
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Private
 	// Python file locations and hash values
 	private static File scriptFileGenerate;
 	private static String hashFileGenerate;
@@ -83,7 +83,7 @@ public class Translator {
 	// Helsinki-NLP/opus-mt-: char limit approx.
 	private static final int modelCharLimit = 5000;
 	// Helsinki-NLP/opus-mt-: model file names
-	private static final String[] MODEL_FILES_TO_DOWNLOAD = { "config.json", "vocab.json", "tokenizer_config.json", "generation_config.json", "metadata.json", "pytorch_model.bin", "source.spm", "target.spm", "tf_model.h5", "flax_model.msgpack", "README.md", ".gitattributes" }; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$ //$NON-NLS-8$ //$NON-NLS-9$ //$NON-NLS-10$ //$NON-NLS-11$ //$NON-NLS-12$
+	private static final String[] MODEL_FILES_TO_DOWNLOAD = { "config.json", "vocab.json", "tokenizer_config.json", "generation_config.json", "metadata.json", "pytorch_model.bin", "source.spm", "target.spm", "tf_model.h5", "flax_model.msgpack", "README.md", ".gitattributes" }; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$//$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$ //$NON-NLS-8$ //$NON-NLS-9$ //$NON-NLS-10$ //$NON-NLS-11$ //$NON-NLS-12$
 	//
 	// Language detector background service
 	private static final Object processLock = new Object();
@@ -91,10 +91,8 @@ public class Translator {
 	private static Process persistentProcess = null;
 	private static BufferedWriter persistentWriter = null;
 	private static BufferedReader persistentReader = null;
-	private static Thread thread ;
+	private static Thread thread;
 	//
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Package
-	// Values
 	// Path and platform (id if duplicate file paths exist)
 	static String modelPath = null;
 	static String sharedPathString = null;
@@ -135,11 +133,9 @@ public class Translator {
 		if (universalTranslations) {
 			return Locale.getAvailableLocales();
 		}
-		return selectedLanguages.stream()
-        .filter(locale -> !disabledLanguages.contains(locale))
-        .toArray(Locale[]::new);
+		return selectedLanguages.stream().filter(locale -> !disabledLanguages.contains(locale)).toArray(Locale[]::new);
 	}
-	
+
 	/**
 	 * Gets the working language tags as strings.
 	 *
@@ -148,9 +144,7 @@ public class Translator {
 	 */
 	public static String[] getWorkingLanguagesAsTags() {
 		if (universalTranslations) {
-			return Arrays.stream(Locale.getAvailableLocales())
-        .map(Locale::toLanguageTag)
-					.toArray(String[]::new);
+			return Arrays.stream(Locale.getAvailableLocales()).map(Locale::toLanguageTag).toArray(String[]::new);
 		}
 		return selectedLanguages.stream()
 				.filter(locale -> !disabledLanguages.contains(locale))
@@ -175,10 +169,6 @@ public class Translator {
 				.map(locale -> locale.getDisplayName(displayLocale))
 				.toArray(String[]::new);
 	}
-
-	
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Public
-	// Values
 
 	/**
 	 * Creates a new timestamp as String or Timestamp.
@@ -230,8 +220,6 @@ public class Translator {
 		}
 	}
 
-
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Paths
 	/**
 	 * Recursively deletes a folder and all its contents.
 	 *
@@ -304,7 +292,6 @@ public class Translator {
 		return null;
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Init/Maintain
 	/**
 	 * Initializes the translation system with default language settings, selected
 	 * languages, Hibernate configuration, model storage path, and content classes.
@@ -326,10 +313,10 @@ public class Translator {
 	 * @param redoTranslationsAndModelFiles If true, re-downloads all model files,
 	 *                                      remakes models and re-translates all
 	 *                                      content
-	 * @param feedContentToDatabase         If true, 
-	 *                                      translates or checks availability for all
-	 *                                      content in contentClasses
-	 *                                      
+	 * @param feedContentToDatabase         If true, translates or checks
+	 *                                      availability for all content in
+	 *                                      contentClasses
+	 * 
 	 * @param platform                      Platform application is going to run on
 	 * @param doFullTranslatorTest          Full test on all translate methods, 3
 	 *                                      times over (uses 3 available languages,
@@ -354,7 +341,7 @@ public class Translator {
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
 	 */
-	public static boolean init(Locale defaultLang, List<Locale> languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, boolean feedContentToDatabase,Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(Locale defaultLang, List<Locale> languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, boolean feedContentToDatabase, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
 		return init(
 				null,
 				defaultLang,
@@ -395,10 +382,10 @@ public class Translator {
 	 * @param redoTranslationsAndModelFiles If true, re-downloads all model files,
 	 *                                      remakes models and re-translates all
 	 *                                      content
-	 *                                      
-     * @param feedContentToDatabase         If true, 
-	 *                                      translates or checks availability for all
-	 *                                      content in contentClasses
+	 * 
+	 * @param feedContentToDatabase         If true, translates or checks
+	 *                                      availability for all content in
+	 *                                      contentClasses
 	 * 
 	 * @param debugMode                     Enables detailed logging during
 	 * @param testingMode                   Enables test-specific logging or
@@ -421,7 +408,7 @@ public class Translator {
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
 	 */
-	public static boolean init(String libhiberbernate_CFG_XML_Path, Locale defaultLang, List<Locale> languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles,boolean feedContentToDatabase, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(String libhiberbernate_CFG_XML_Path, Locale defaultLang, List<Locale> languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, boolean feedContentToDatabase, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
 		if (!runningMaintenance && doModels) {
 			//
 			runningMaintenance = true;
@@ -434,11 +421,6 @@ public class Translator {
 			T_Log.testing = testingMode;
 			T_Log.showCritical = showCriticalErrors;
 			T_Log.showIgnored = showIgnoredErrors;
-			if (defaultLang != null) {
-				defaultLanguage = defaultLang;
-			}else{
-				defaultLanguage = Locale.ENGLISH; 
-			}
 			if (libhiberbernate_CFG_XML_Path != null) {
 				libhiberbernate = libhiberbernate_CFG_XML_Path;
 			}
@@ -469,12 +451,27 @@ public class Translator {
 				for (Locale availableLanguage : Locale.getAvailableLocales()) {
 					selectedLanguages.add(availableLanguage);
 				}
-				
-			}else{
-				
+			} else {
 				for (Locale selectedLanguage : languageSelection) {
 					selectedLanguages.add(selectedLanguage);
 				}
+			}
+			//
+			T_Log.log("Starting Language Detection Model..."); //$NON-NLS-1$
+			alwaysRunDetector = runLanguageDetectorService;
+			if (alwaysRunDetector) {
+				defaultLanguage = runLanguageDetectorService("Testing, testing, is this thing working?"); //$NON-NLS-1$
+			} else {
+				defaultLanguage = runLanguageDetectorOneTime("Testing, testing, is this thing working?"); //$NON-NLS-1$
+			}
+			if (defaultLanguage == null || !defaultLanguage.getLanguage().equals("en")) { //$NON-NLS-1$
+				T_Log.log("Language Detection Not Working: locale: " + defaultLanguage.toLanguageTag()); //$NON-NLS-1$
+				return false;
+			}
+			T_Log.log("Language Detection Working"); //$NON-NLS-1$
+			//
+			if (defaultLang != null) {
+				defaultLanguage = defaultLang;
 			}
 			//
 			//
@@ -484,67 +481,52 @@ public class Translator {
 				TranslatorEntity.deleteUnusedTranslations();
 				TranslatorEntity.deleteDuplicateTranslations();
 			}
-			downloadFilesAndCreateModels(defaultLanguage,true);
+			downloadFilesAndCreateModels(defaultLanguage, true);
 			redoTranslationsInTable = false;
 			//
 			doModels = false;
 			runningMaintenance = false;
 			//
-			//
-			T_Log.log("Starting Language Detection Model..."); //$NON-NLS-1$
-			alwaysRunDetector = runLanguageDetectorService;
-			if (alwaysRunDetector) {
-				defaultLanguage = runLanguageDetectorService("Testing, testing, is this thing working?"); //$NON-NLS-1$
-			} else {
-				defaultLanguage = runLanguageDetectorOneTime("Testing, testing, is this thing working?"); //$NON-NLS-1$
-			}
-			if (defaultLanguage == null || !defaultLanguage.equals(Locale.ENGLISH)) { 
-				T_Log.log("Language Detection Not Working"); //$NON-NLS-1$
-				return false;
-			}
-			T_Log.log("Language Detection Working"); //$NON-NLS-1$
-			//
-			
-			if(feedContentToDatabase){
-			final TranslateStacker translateStacker = new TranslateStacker();
-			if (contentClasses != null && contentClasses.length > 0) {
-				for (Class<?> clazz : contentClasses) {
-					for (final Class<?> nested : clazz.getDeclaredClasses()) {
-						if (nested.isEnum() && Translatable.class.isAssignableFrom(nested)) {
-							final Translatable[] enumValues = (Translatable[]) nested.getEnumConstants();
-							translateStacker.addAll(enumValues);
-						} else {
-							try {
-								Object instance = nested.getDeclaredConstructor().newInstance();
-								if (instance instanceof Translatable translatable) {
-									translateStacker.add(translatable);
+			if (feedContentToDatabase) {
+				final TranslateStacker translateStacker = new TranslateStacker();
+				if (contentClasses != null && contentClasses.length > 0) {
+					for (Class<?> clazz : contentClasses) {
+						for (final Class<?> nested : clazz.getDeclaredClasses()) {
+							if (nested.isEnum() && Translatable.class.isAssignableFrom(nested)) {
+								final Translatable[] enumValues = (Translatable[]) nested.getEnumConstants();
+								translateStacker.addAll(enumValues);
+							} else {
+								try {
+									Object instance = nested.getDeclaredConstructor().newInstance();
+									if (instance instanceof Translatable translatable) {
+										translateStacker.add(translatable);
+									}
+								} catch (Exception e) {
+									T_Log.log("Error While Determining If Object Is Translatable", e); //$NON-NLS-1$
 								}
-							} catch (Exception e) {
-								T_Log.log("Error While Determining If Object Is Translatable", e); //$NON-NLS-1$
 							}
 						}
 					}
 				}
-			}
-			for (final Class<?> nested : TranslatorContent.class.getDeclaredClasses()) {
-				if (nested.isEnum() && Translatable.class.isAssignableFrom(nested)) {
-					final Translatable[] enumValues = (Translatable[]) nested.getEnumConstants();
-					translateStacker.addAll(enumValues);
-				} else {
-					try {
-						Object instance = nested.getDeclaredConstructor().newInstance();
-						if (instance instanceof Translatable translatable) {
-							translateStacker.add(translatable);
+				for (final Class<?> nested : TranslatorContent.class.getDeclaredClasses()) {
+					if (nested.isEnum() && Translatable.class.isAssignableFrom(nested)) {
+						final Translatable[] enumValues = (Translatable[]) nested.getEnumConstants();
+						translateStacker.addAll(enumValues);
+					} else {
+						try {
+							Object instance = nested.getDeclaredConstructor().newInstance();
+							if (instance instanceof Translatable translatable) {
+								translateStacker.add(translatable);
+							}
+						} catch (Exception ignored) {
+							T_Log.log("Error While Determining If Object Is Translatable", ignored, true); //$NON-NLS-1$
 						}
-					} catch (Exception ignored) {
-						T_Log.log("Error While Determining If Object Is Translatable", ignored,true); //$NON-NLS-1$
 					}
 				}
-			}
-			for(Locale l : Locale.getAvailableLocales()){
-				translateStacker.add(l.getDisplayLanguage(Locale.forLanguageTag(defaultLanguage.toLanguageTag())));
-			}
-			translateStacker.feedTranslatorDatabase();
+				for (Locale l : Locale.getAvailableLocales()) {
+					translateStacker.add(l.getDisplayLanguage(Locale.forLanguageTag(defaultLanguage.toLanguageTag())));
+				}
+				translateStacker.feedTranslatorDatabase();
 			}
 			return true;
 		}
@@ -566,14 +548,13 @@ public class Translator {
 			TranslatorEntity.deleteUnusedTranslations();
 			TranslatorEntity.deleteDuplicateTranslations();
 			//
-			downloadFilesAndCreateModels(defaultLanguage,true);
+			downloadFilesAndCreateModels(defaultLanguage, true);
 			//
 			runningMaintenance = false;
 		}
 		return true;
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Shutdown
 	/**
 	 * Shuts Down Translator: Sessions, Executors and models...Everything.
 	 * 
@@ -583,7 +564,6 @@ public class Translator {
 		closeLanguageDetectorService();
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Settings
 	/**
 	 * Sets whether to re-download modelfiles at start-up and redo translations.
 	 * delete, translate and re-save. If set after start-up it will redo translation
@@ -605,8 +585,6 @@ public class Translator {
 		return defaultLanguage;
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Get
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Url/Dir
 	/**
 	 * Constructs the path to a model directory for translation.
 	 *
@@ -641,8 +619,6 @@ public class Translator {
 		return "https://huggingface.co/Helsinki-NLP/opus-mt-" + localeCodeIn + "-" + localeCodeOut + "/resolve/main/" + fileName; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Runtime
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Python
 	/**
 	 * Ensures that the CTranslate2 model exists for a given language pair. If not,
 	 * generates it via Python script. If this fails, language is marked un-usable.
@@ -744,7 +720,7 @@ public class Translator {
 						finalLangIN = null;
 					}
 				}
-				if (finalLangIN!=null &&finalInput != null && !finalInput.isBlank()) {
+				if (finalLangIN != null && finalInput != null && !finalInput.isBlank()) {
 					final ProcessBuilder pb = new ProcessBuilder(
 							ToPyFiles.pythonLang,
 							scriptFileTranslate.getAbsolutePath(),
@@ -831,45 +807,47 @@ public class Translator {
 	 *         null if no bridge can be made
 	 */
 	private static BridgeContainer bridgeLanguages(Locale langIN, Locale langOUT, String input) throws Exception {
-		for (Locale langBridge : languagesLinks.get(langIN)) {
-			if (languagesLinks.get(langBridge)!=null &&languagesLinks.get(langBridge).contains(langOUT)) {
-				Path modelDir = getModelDir(true, langIN, langBridge);
-				if (modelDir.toFile().exists()) {
-					if (input != null && !input.isBlank()) {
-						final ProcessBuilder pb = new ProcessBuilder(
-								ToPyFiles.pythonLang,
-								scriptFileTranslate.getAbsolutePath(),
-								modelDir.toAbsolutePath().toString(),
-								langIN.getLanguage(),
-								langBridge.getLanguage(),
-								input);
-						pb.redirectErrorStream(false);
-						final Process p = pb.start();
-						final StringBuilder output = new StringBuilder();
-						try (BufferedReader reader = new BufferedReader(
-								new InputStreamReader(
-										p.getInputStream(),
-										StandardCharsets.UTF_8));
-								BufferedReader errReader = new BufferedReader(
-										new InputStreamReader(
-												p.getErrorStream(),
-												StandardCharsets.UTF_8));) {
-							String line;
-							while ((line = reader.readLine()) != null) {
-								output.append(line);
+		if (languagesLinks.get(langIN) != null) {
+			for (Locale langBridge : languagesLinks.get(langIN)) {
+				if (languagesLinks.get(langBridge) != null && languagesLinks.get(langBridge).contains(langOUT)) {
+					Path modelDir = getModelDir(true, langIN, langBridge);
+					if (modelDir.toFile().exists()) {
+						if (input != null && !input.isBlank()) {
+							final ProcessBuilder pb = new ProcessBuilder(
+									ToPyFiles.pythonLang,
+									scriptFileTranslate.getAbsolutePath(),
+									modelDir.toAbsolutePath().toString(),
+									langIN.getLanguage(),
+									langBridge.getLanguage(),
+									input);
+							pb.redirectErrorStream(false);
+							final Process p = pb.start();
+							final StringBuilder output = new StringBuilder();
+							try (BufferedReader reader = new BufferedReader(
+									new InputStreamReader(
+											p.getInputStream(),
+											StandardCharsets.UTF_8));
+									BufferedReader errReader = new BufferedReader(
+											new InputStreamReader(
+													p.getErrorStream(),
+													StandardCharsets.UTF_8));) {
+								String line;
+								while ((line = reader.readLine()) != null) {
+									output.append(line);
+								}
+								while ((line = errReader.readLine()) != null) {
+									T_Log.log(line);
+								}
 							}
-							while ((line = errReader.readLine()) != null) {
-								T_Log.log(line);
+							final int exit = p.waitFor();
+							if (exit != 0) {
+								T_Log.log("CTranslate2 Translation Failed, Exit Code: " + exit); //$NON-NLS-1$
+								return null;
 							}
+							return new BridgeContainer(
+									langBridge,
+									output.toString());
 						}
-						final int exit = p.waitFor();
-						if (exit != 0) {
-							T_Log.log("CTranslate2 Translation Failed, Exit Code: " + exit); //$NON-NLS-1$
-							return null;
-						}
-						return new BridgeContainer(
-								langBridge,
-								output.toString());
 					}
 				}
 			}
@@ -945,28 +923,16 @@ public class Translator {
 				}
 				JsonNode arr = new ObjectMapper().readTree(output.toString());
 				String topLangCode = arr.get(0).get("language").asText(); //$NON-NLS-1$
+				T_Log.log("Top Language Code: " + topLangCode); //$NON-NLS-1$
 				@SuppressWarnings("unused")
 				double topConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				String secondLangCode = arr.get(0).get("language").asText(); //$NON-NLS-1$
-				double secondConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				String thirdLangCode = arr.get(0).get("language").asText(); //$NON-NLS-1$
-				double thirdConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				Locale detected = Locale.forLanguageTag(topLangCode.substring(0, 3));
-				if (detected == null && secondConf > 0.4) {
-					detected = Locale.forLanguageTag(secondLangCode.substring(0, 3));
-				}
-				if (detected == null && thirdConf > 0.4) {
-					detected = Locale.forLanguageTag(thirdLangCode.substring(0, 3));
-				}
+				Locale detected = Locale.forLanguageTag(toTwoLetteLanguagerCode(topLangCode));
 				if (detected == null) {
-					return defaultLanguage;
+					return null;
 				}
-				
-				
-				if (!disabledLanguages.contains( detected)) {
+				if (!disabledLanguages.contains(detected)) {
 					return detected;
 				}
-				
 				if (universalTranslations) {
 					return detected;
 				}
@@ -1024,7 +990,7 @@ public class Translator {
 													persistentProcess.getErrorStream(),
 													StandardCharsets.UTF_8))) {
 										String line;
-										while (persistentProcess.isAlive()&&(line = err.readLine()) != null) {
+										while (persistentProcess.isAlive() && (line = err.readLine()) != null) {
 											T_Log.log(line);
 										}
 									} catch (IOException ignored) {
@@ -1039,7 +1005,6 @@ public class Translator {
 				}
 			}
 		}
-		// ---- Now send the input and read the response ----
 		try {
 			synchronized (processLock) {
 				persistentWriter.write(input);
@@ -1052,35 +1017,31 @@ public class Translator {
 				}
 				JsonNode arr = new ObjectMapper().readTree(jsonLine);
 				String topLangCode = arr.get(0).get("language").asText(); //$NON-NLS-1$
+				T_Log.log("Top Language Code: " + topLangCode); //$NON-NLS-1$
 				@SuppressWarnings("unused")
 				double topConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				String secondLangCode = arr.get(1).get("language").asText(); //$NON-NLS-1$
-				double secondConf = arr.get(1).get("confidence").asDouble(); //$NON-NLS-1$
-				String thirdLangCode = arr.get(2).get("language").asText(); //$NON-NLS-1$
-				double thirdConf = arr.get(2).get("confidence").asDouble(); //$NON-NLS-1$
-				Locale detected = Locale.forLanguageTag(topLangCode.substring(0, 3));
-				if (detected == null && secondConf > 0.4) {
-					detected = Locale.forLanguageTag(secondLangCode.substring(0, 3));
-				}
-				if (detected == null && thirdConf > 0.4) {
-					detected = Locale.forLanguageTag(thirdLangCode.substring(0, 3));
-				}
+				Locale detected = Locale.forLanguageTag(toTwoLetteLanguagerCode(topLangCode));
 				if (detected == null) {
 					return null;
 				}
-				if (!disabledLanguages.contains( detected)) {
+				if (!disabledLanguages.contains(detected)) {
 					return detected;
 				}
-				
 				if (universalTranslations) {
 					return detected;
 				}
-				return null;
+				return defaultLanguage;
 			}
 		} catch (Exception e) {
 			T_Log.log("Detection Error At PY File", e); //$NON-NLS-1$
-			return null;
+			return defaultLanguage;
 		}
+	}
+
+	private static String toTwoLetteLanguagerCode(String conlidCode) {
+		String iso639_3 = conlidCode.substring(0, 3);
+		ULocale locale = ULocale.forLanguageTag(iso639_3);
+		return locale.getLanguage(); // "eng" >> "en" etc... if mapping exists
 	}
 
 	private static void closeLanguageDetectorService() {
@@ -1097,7 +1058,7 @@ public class Translator {
 			} catch (IOException ignored) {
 				T_Log.log("Error Closing Persistent Reader: ", ignored, true); //$NON-NLS-1$
 			}
-			if (persistentProcess != null){
+			if (persistentProcess != null) {
 				persistentProcess.destroyForcibly();
 			}
 			persistentProcess = null;
@@ -1289,8 +1250,6 @@ public class Translator {
 		}
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// SHA512
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// ALGO
 	/**
 	 * Computes the SHA-512 hash of a given string.
 	 *
@@ -1312,8 +1271,6 @@ public class Translator {
 		return hexString.toString();
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Model
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Files
 	/**
 	 * Downloads model files for all language pairs and creates corresponding
 	 * language models. This method iterates over all available languages, downloads
@@ -1346,21 +1303,20 @@ public class Translator {
 						final Path modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
 						if (!Files.exists(modelBin)) {
 							T_Log.log(
-								"Download Failed For " + lang + "-" + lang2 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-										.toAbsolutePath(),
-								e);
+									"Download Failed For " + lang + "-" + lang2 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+											.toAbsolutePath(),
+									e);
 							if (delete_Folder(modelDir)) {
-								
 								T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
 							} else {
 								T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
 							}
-						}else{
-								T_Log.log(
+						} else {
+							T_Log.log(
 									"Download Failed For " + lang2 + "-" + lang + ". Model Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 											.toAbsolutePath(),
 									e);
-							}
+						}
 					}
 					if (defaultToCleintSuccess) {
 						try {
@@ -1383,20 +1339,19 @@ public class Translator {
 							final Path modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
 							if (!Files.exists(modelBin)) {
 								T_Log.log(
-									"Download Failed For " + lang2 + "-" + lang + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-											.toAbsolutePath(),
-									e);
+										"Download Failed For " + lang2 + "-" + lang + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+												.toAbsolutePath(),
+										e);
 								if (delete_Folder(modelDir)) {
 									T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
 								} else {
 									T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
 								}
-							}
-							else{
+							} else {
 								T_Log.log(
-									"Download Failed For " + lang2 + "-" + lang + ". Model Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-											.toAbsolutePath(),
-									e);
+										"Download Failed For " + lang2 + "-" + lang + ". Model Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+												.toAbsolutePath(),
+										e);
 							}
 						}
 					}
@@ -1405,7 +1360,6 @@ public class Translator {
 		}
 	}
 
-	
 	/**
 	 * Downloads individual model files for a given language pair using the provided
 	 * HTTP client. Checks for existing files and decides whether to re-download the
@@ -1472,7 +1426,7 @@ public class Translator {
 	 * @param language The language for which to download Flatpickr resources.
 	 */
 	private static void downloadFlatpickerFile(final Locale language) {
-		if (language != Locale.ENGLISH) {
+		if (!language.getLanguage().equals("en")) { //$NON-NLS-1$
 			try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()) {
 				final String flatpickrResourcePath = ToFlatpickr.flatpickrRelativePath;
 				// Get the directory where the JAR is located
@@ -1564,7 +1518,6 @@ public class Translator {
 			return firstPart.toString();
 		}
 	}
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Public
 
 	// MULTIPLE TRAANSLATION METHODS AND DATABASE FEEDING
 	/**
@@ -1903,24 +1856,23 @@ public class Translator {
 			if (from != null) {
 				langIN = from;
 			}
-			Locale langOUT = to;
 			try {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
 				}
-				if (!langIN.equals(langOUT)) {
-					final String modelCode = langIN + "-" + langOUT; //$NON-NLS-1$
+				if (!langIN.equals(to)) {
+					final String modelCode = langIN.getLanguage() + "-" + to.getLanguage(); //$NON-NLS-1$
 					final String translatedFromDatabase = searchDatabase(modelCode, input, recreateTableEntry);
 					if (translatedFromDatabase != null) {
 						return translatedFromDatabase;
 					}
-					final String translatedFromModel = doOneString(langIN, langOUT, modelCode, input, true);
+					final String translatedFromModel = doOneString(langIN, to, modelCode, input, true);
 					if (translatedFromModel != null) {
 						return translatedFromModel;
 					}
 				}
 			} catch (final Exception e) {
-				T_Log.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Translation Failed For " + langIN.getLanguage() + " - " + to.getLanguage(), e); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		}
 		return input.toString();
@@ -2013,17 +1965,18 @@ public class Translator {
 		}
 		Map<T, String> results = new LinkedHashMap<>();
 		if (!disabledLanguages.contains(to)) {
-			Locale langIN = defaultLanguage;
+			Locale langIN;
 			if (from != null) {
 				langIN = from;
+			} else {
+				langIN = defaultLanguage;
 			}
-			Locale langOUT = to;
 			try {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
 				}
-				if (!langIN.equals(langOUT)) {
-					final String modelCode = langIN + "-" + langOUT; //$NON-NLS-1$
+				if (!langIN.equals(to)) {
+					final String modelCode = langIN.getLanguage() + "-" + to.getLanguage(); //$NON-NLS-1$
 					final tSearchResult<T> tSearchResult = searchDatabase(modelCode, inputs, recreateTableEntrys);
 					if (tSearchResult.missing.isEmpty()) {
 						return tSearchResult.found;
@@ -2032,7 +1985,7 @@ public class Translator {
 					if (doAsList) {
 						final Map<T, String> missingResults = (Map<T, String>) doAsList(
 								langIN,
-								langOUT,
+								to,
 								modelCode,
 								tSearchResult.missing,
 								true);
@@ -2041,7 +1994,7 @@ public class Translator {
 					}
 					final Map<T, String> missingResults = (Map<T, String>) doAsStrings(
 							langIN,
-							langOUT,
+							to,
 							modelCode,
 							tSearchResult.missing,
 							true);
@@ -2049,7 +2002,7 @@ public class Translator {
 					return foundResults;
 				}
 			} catch (final Exception e) {
-				T_Log.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Translation Failed For " + langIN.getLanguage() + " - " + to.getLanguage(), e); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		}
 		results = new LinkedHashMap<>();
@@ -2093,24 +2046,25 @@ public class Translator {
 			return null;
 		}
 		if (!disabledLanguages.contains(to)) {
-			Locale langIN = defaultLanguage;
+			Locale langIN;
 			if (from != null) {
 				langIN = from;
+			} else {
+				langIN = defaultLanguage;
 			}
-			Locale langOUT = to;
 			try {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
 				}
-				if (!langOUT.equals(langIN)) {
-					final String modelCode = langIN + "-" + langOUT; //$NON-NLS-1$
-					final String translatedFromModele = doOneString(langIN, langOUT, modelCode, input, false);
+				if (!langIN.equals(to)) {
+					final String modelCode = langIN.getLanguage() + "-" + to.getLanguage(); //$NON-NLS-1$
+					final String translatedFromModele = doOneString(langIN, to, modelCode, input, false);
 					if (translatedFromModele != null) {
 						return translatedFromModele;
 					}
 				}
 			} catch (final Exception e) {
-				T_Log.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Translation Failed For " + langIN.getLanguage() + " - " + to.getLanguage(), e); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		}
 		return input.toString();
@@ -2151,29 +2105,31 @@ public class Translator {
 		}
 		Map<T, String> results = new LinkedHashMap<>();
 		if (!disabledLanguages.contains(to)) {
-			Locale FROM = defaultLanguage;
+			Locale langIN;
 			if (from != null) {
-				FROM = from;
+				langIN = from;
+			} else {
+				langIN = defaultLanguage;
 			}
 			try {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
 				}
-				if (!FROM.equals(to)) {
-					final String modelCode = FROM + "-" + to; //$NON-NLS-1$
+				if (!langIN.equals(to)) {
+					final String modelCode = langIN.getLanguage() + "-" + to.getLanguage(); //$NON-NLS-1$
 					if (doAsList) {
-						results = doAsList(FROM, to, modelCode, inputs, false);
+						results = doAsList(langIN, to, modelCode, inputs, false);
 					}
 					if (!results.isEmpty()) {
 						return results;
 					}
-					results = doAsStrings(FROM, to, modelCode, inputs, false);
+					results = doAsStrings(langIN, to, modelCode, inputs, false);
 					if (!results.isEmpty()) {
 						return results;
 					}
 				}
 			} catch (final Exception e) {
-				T_Log.log("Translation Failed For " + FROM + " - " + to, e); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Translation Failed For " + langIN + " - " + to, e); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		}
 		results = new LinkedHashMap<>();
@@ -2183,8 +2139,6 @@ public class Translator {
 		return results;
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Database
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Lookup
 	/**
 	 * Represents the results of a database search operation.
 	 */
@@ -2492,31 +2446,27 @@ public class Translator {
 		}
 		return (o).toString();
 	}
-	
+
 	/**
-	 * /** Detects if a language is read right-to-left otherwise left-to-right.
+	 * Detects if a language is read right-to-left otherwise left-to-right.
 	 *
 	 * @param language The locale to be used.
 	 * @return A boolean true if read right-to-left otherwise false.
 	 */
 	public static boolean isRightToLeft(Locale language) {
-    return Bidi.requiresBidi(
-        language.getDisplayName(language).toCharArray(),
-        0,
-        language.getDisplayName(language).length()
-        );
-    }
+		return Bidi.requiresBidi(language.getDisplayName(language).toCharArray(), 0, language.getDisplayName(language).length());
+	}
 
 	/**
-	 * /** Returns the currency symbol for the locale provided.
+	 * Returns the currency symbol for the locale provided.
 	 *
 	 * @param Locale The locale to be used.
 	 * @return A String, the currency symbol the the locale.
 	 */
-	public static String getCurrencySymbol(Locale locale){
+	public static String getCurrencySymbol(Locale locale) {
 		return Currency.getInstance(locale).getSymbol();
 	}
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Format/Parse
+
 	/**
 	 * Formats a numeric value according to the specified language's locale.
 	 *
@@ -2622,7 +2572,7 @@ public class Translator {
 		DateTimeFormatter outputFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale);
 		LocalDate localDate = null;
 		// Add "yyyy-MM-dd" (standard for Timestamp date part) and keep others
-		String[] formats = { "yyyy-MM-dd", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy/MM/dd" }; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+		String[] formats = { "yyyy-MM-dd", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy/MM/dd" }; //$NON-NLS-1$ //$NON-NLS-2$//$NON-NLS-3$ //$NON-NLS-4$
 		for (String format : formats) {
 			try {
 				localDate = LocalDate.parse(datePart, DateTimeFormatter.ofPattern(format));
@@ -2757,8 +2707,7 @@ public class Translator {
 	}
 
 	/**
-	 * /** Parses a time string using locale-aware formatters and returns a Time
-	 * object.
+	 * Parses a time string using locale-aware formatters and returns a Time object.
 	 *
 	 * @param language The language whose locale will be used for parsing.
 	 * @param timeStr  A time string to parse (may also contain date part).
@@ -2799,8 +2748,7 @@ public class Translator {
 						DateTimeFormatter.ofPattern("HH:mm:ss"), //$NON-NLS-1$
 						DateTimeFormatter.ofPattern("HH:mm"), //$NON-NLS-1$
 						DateTimeFormatter.ofPattern("h:mm a"), //$NON-NLS-1$
-						DateTimeFormatter.ofPattern("hh:mm:ss a") //$NON-NLS-1$
-				));
+						DateTimeFormatter.ofPattern("hh:mm:ss a"))); //$NON-NLS-1$
 		for (DateTimeFormatter fmt : formatters) {
 			try {
 				DateTimeFormatter strict = fmt.withResolverStyle(ResolverStyle.STRICT);
