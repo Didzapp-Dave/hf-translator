@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.text.Bidi;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -50,11 +51,9 @@ import java.util.Currency;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Stream;
@@ -62,20 +61,16 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ibm.icu.util.ULocale;
 
 import didzapp.T_Log;
 import didzapp.HF_Translator.TranslatorContent.FolderName;
-import didzapp.HF_Translator.TranslatorContent.TestContent;
 import didzapp.HF_Translator.TranslatorContent.Translatable;
 import didzapp.HF_Translator.TranslatorEntity.HibernateUtil;
 import didzapp.HF_Translator.TranslatorResourcePaths.ToFlatpickr;
 import didzapp.HF_Translator.TranslatorResourcePaths.ToPyFiles;
 
 public class Translator {
-	private static boolean devTesting_DoFullClassfileTest = false;
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Private
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Values
 	// Python file locations and hash values
 	private static File scriptFileGenerate;
 	private static String hashFileGenerate;
@@ -117,12 +112,70 @@ public class Translator {
 	// External resource, hibernate config file path, "/libhibernate.cfg.xml"
 	static String libhiberbernate;
 	//
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Package
 	// Values
 	// Folder for model storage
 	static FolderName languageModelFolder;
 	// Default language
-	static Language defaultLanguage;
+	static Locale defaultLanguage;
+	// Working languages
+	static List<Locale> disabledLanguages;
+	// Selected languages
+	static List<Locale> selectedLanguages;
+
+	/**
+	 * Gets the working languages.
+	 *
+	 * @return all languages if universal translations is enabled, otherwise all
+	 *         languages except the disabled ones.
+	 */
+	public static Locale[] getWorkingLanguages() {
+		if (universalTranslations) {
+			return Locale.getAvailableLocales();
+		}
+		return selectedLanguages.stream()
+        .filter(locale -> !disabledLanguages.contains(locale))
+        .toArray(Locale[]::new);
+	}
+	
+	/**
+	 * Gets the working language tags.
+	 *
+	 * @return all languages if universal translations is enabled, otherwise all
+	 *         languages except the disabled ones.
+	 */
+	public static String[] getWorkingLanguagesAsTags() {
+		if (universalTranslations) {
+			return Arrays.stream(Locale.getAvailableLocales())
+        .map(Locale::toLanguageTag)
+        .toArray(String[]::new);
+		}
+		return selectedLanguages.stream()
+        .filter(locale -> !disabledLanguages.contains(locale))
+        .map(Locale::toLanguageTag)
+        .toArray(String[]::new);
+	}
+	
+	
+	public static String[] getWorkingLanguageNames(Locale displayLocale) {
+    if (universalTranslations) {
+        return Arrays.stream(Locale.getAvailableLocales())
+                .map(locale -> locale.getDisplayName(displayLocale))
+                .toArray(String[]::new);
+    }
+
+    return selectedLanguages.stream()
+            .filter(locale -> !disabledLanguages.contains(locale))
+                            .map(locale -> locale.getDisplayName(displayLocale))
+
+            .toArray(String[]::new);
+}
+	
+	
+
+	
+	
+	// Languages Links
+	static Map<Locale, List<Locale>> languagesLinks;
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Public
 	// Values
@@ -177,358 +230,6 @@ public class Translator {
 		}
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Languages
-	public static enum Language {
-		ENGLISH("english", new Locale.Builder().setLanguage("en").setRegion("GB").build(), ZoneId.of("Europe/London"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		USA("us", new Locale.Builder().setLanguage("en").setRegion("US").build(), ZoneId.of("America/New_York"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		CANADA("canada", new Locale.Builder().setLanguage("en").setRegion("CA").build(), ZoneId.of("America/Toronto"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		// European
-		SPANISH("spanish", new Locale.Builder().setLanguage("es").setRegion("ES").build(), ZoneId.of("Europe/Madrid"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		FRENCH("french", new Locale.Builder().setLanguage("fr").setRegion("FR").build(), ZoneId.of("Europe/Paris"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		GERMAN("german/dutch", new Locale.Builder().setLanguage("de").setRegion("DE").build(), ZoneId.of("Europe/Berlin"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		ITALIAN("italian", new Locale.Builder().setLanguage("it").setRegion("IT").build(), ZoneId.of("Europe/Rome"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		NEDERLANDS("nederlands/dutch", new Locale.Builder().setLanguage("nl").setRegion("NL").build(), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-				ZoneId.of("Europe/Amsterdam"), false), //$NON-NLS-1$
-		SWEDISH("swedish", new Locale.Builder().setLanguage("sv").setRegion("SE").build(), ZoneId.of("Europe/Stockholm"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		DANISH("danish", new Locale.Builder().setLanguage("da").setRegion("DK").build(), ZoneId.of("Europe/Copenhagen"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		FINNISH("finnish", new Locale.Builder().setLanguage("fi").setRegion("FI").build(), ZoneId.of("Europe/Helsinki"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		CZECH("czech", new Locale.Builder().setLanguage("cs").setRegion("CZ").build(), ZoneId.of("Europe/Prague"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		BULGARIAN("bulgarian", new Locale.Builder().setLanguage("bg").setRegion("BG").build(), ZoneId.of("Europe/Sofia"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		HUNGARIAN("hungarian", new Locale.Builder().setLanguage("hu").setRegion("HU").build(), ZoneId.of("Europe/Budapest"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-				false),
-		ICELANDIC("icelandic", new Locale.Builder().setLanguage("is").setRegion("IS").build(), ZoneId.of("Atlantic/Reykjavik"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-				false),
-		ESTONIAN("estonian", new Locale.Builder().setLanguage("et").setRegion("EE").build(), ZoneId.of("Europe/Tallinn"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		// Slavic & Cyrillic
-		RUSSIAN("russian", new Locale.Builder().setLanguage("ru").setRegion("RU").build(), ZoneId.of("Europe/Moscow"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		UKRAINIAN("ukrainian", new Locale.Builder().setLanguage("uk").setRegion("UA").build(), ZoneId.of("Europe/Kyiv"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		// Asian
-		JAPANESE("japanese", new Locale.Builder().setLanguage("ja").setRegion("JP").build(), ZoneId.of("Asia/Tokyo"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		CHINESE_SIMPLIFIED("chinese", new Locale.Builder().setLanguage("zh").setRegion("CN").build(), ZoneId.of("Asia/Shanghai"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-				false),
-		HINDI("hindi", new Locale.Builder().setLanguage("hi").setRegion("IN").build(), ZoneId.of("Asia/Kolkata"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		INDONESIAN("indonesian", new Locale.Builder().setLanguage("id").setRegion("ID").build(), ZoneId.of("Asia/Jakarta"), //$NON-NLS-1$ //$NON-NLS-2$//$NON-NLS-3$ //$NON-NLS-4$
-				false),
-		MALAYALAM("malayalam", new Locale.Builder().setLanguage("ml").setRegion("IN").build(), ZoneId.of("Asia/Kolkata"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		// Middle Eastern (RTL)
-		ARABIC("arabic", new Locale.Builder().setLanguage("ar").setRegion("SA").build(), ZoneId.of("Asia/Riyadh"), true), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		// Central Asian / Middle Eastern (Non-RTL)
-		URDU("urdu", new Locale.Builder().setLanguage("ur").setRegion("PK").build(), ZoneId.of("Asia/Karachi"), true), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		// African
-		HAUSA("hausa", new Locale.Builder().setLanguage("ha").setRegion("NG").build(), ZoneId.of("Africa/Lagos"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		IGBO("igbo", new Locale.Builder().setLanguage("ig").setRegion("NG").build(), ZoneId.of("Africa/Lagos"), false), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		XHOSA("xhosa", new Locale.Builder().setLanguage("xh").setRegion("ZA").build(), ZoneId.of("Africa/Johannesburg"), false) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-		//
-		; // here so it doesnt get in the way adding languages
-			//
-
-		/**
-		 * String value for Language
-		 */
-		private final String value;
-		/**
-		 * Locale vlaue for Language
-		 */
-		private final Locale locale;
-		/**
-		 * ZoneId vlaue for Language
-		 */
-		private final ZoneId zoneId;
-		/**
-		 * Reads from right to left vlaue for Language (left to right = false / right to
-		 * left = true).
-		 */
-		private final boolean rtl;
-		/**
-		 * If usable vlaue for Language is False removes the language from use in every
-		 * context at runtime Its set automatically if corresponding language model
-		 * doesn't exist / is usable.
-		 */
-		private boolean usable = true;
-		/**
-		 * If selected vlaue for Language is False removes the language from use in
-		 * every context at runtime Its set specifically to determine if this language
-		 * is selected for use at runtime.
-		 */
-		private boolean selected = true;
-		/**
-		 * List containing String values for Languages usable with this Language
-		 * (languages that this language can be directly translated to because the
-		 * language > language model exists).
-		 */
-		private final List<String> compatLanguages = new ArrayList<>();
-
-		/**
-		 * Constructs a new Language instance with the specified display value, locale,
-		 * time zone, and text direction.
-		 *
-		 * @param value  the string for this Language (e.g., "English", "French")
-		 * @param locale the Java Locale object
-		 * @param zoneId the time zone id (e.g., ZoneId.of("Europe/Paris"))
-		 * @param rtl    true if the language uses right‑to‑left script (e.g., Arabic,
-		 *               Hebrew); false for left‑to‑right languages
-		 */
-		Language(final String value, final Locale locale, final ZoneId zoneId, final boolean rtl) {
-			this.value = value;
-			this.locale = locale;
-			this.zoneId = zoneId;
-			this.rtl = rtl;
-		}
-
-		/**
-		 * Returns value .
-		 *
-		 * @return the internal value as a String
-		 */
-		public String getValue() {
-			return this.value;
-		}
-
-		/**
-		 * Returns the locale.
-		 *
-		 * @return the Locale
-		 */
-		public Locale getLocale() {
-			return this.locale;
-		}
-
-		/**
-		 * Returns the time zone id (e.g., "Europe/London")
-		 *
-		 * @return the ZoneId
-		 */
-		public ZoneId getZoneId() {
-			return this.zoneId;
-		}
-
-		/**
-		 * Returns whether right‑to‑left (RTL) layout is enabled.
-		 *
-		 * @return true if RTL mode is active, false otherwise
-		 */
-		public boolean getRTL() {
-			return this.rtl;
-		}
-
-		/**
-		 * Checks whether this Language is in a usable state for translation.
-		 *
-		 * @return true if usable, false otherwise
-		 */
-		public boolean isUsable() {
-			return this.usable;
-		}
-
-		/**
-		 * Checks whether this selected for use when translating
-		 *
-		 * @return true if selected, false otherwise
-		 */
-		public boolean isSelected() {
-			return this.selected;
-		}
-
-		/**
-		 * Gets list of languages available for direct translation.
-		 *
-		 * @return List<String> of available languages as strings, use
-		 *         {@link #fromString()} to convert when needed
-		 */
-		public List<String> getAvailableLanguages() {
-			return this.compatLanguages;
-		}
-
-		/**
-		 * Gets list of languages available for direct translation.
-		 *
-		 * 
-		 */
-		public void addToAvailableLanguages(Language language) {
-			this.compatLanguages.add(language.toString());
-		}
-
-		/**
-		 * Gets a boolean, true if the language is available. false otherwise.
-		 *
-		 * @return true if Language is available.
-		 * 
-		 */
-		public boolean hasAvailableLanguage(Language language) {
-			if (this.compatLanguages.contains(language.toString())) {
-				return true;
-			}
-			return false;
-		}
-
-		/**
-		 * Returns all languages that can be translated to the given language.
-		 *
-		 * @param language the target language (the one being translated into)
-		 * @return a list of languages that support translation to the specified
-		 *         language
-		 */
-		public static List<Language> getLanguagesThatTranslateTo(Language language) {
-			List<Language> result = new ArrayList<>();
-			for (Language lang : Language.usableValues()) {
-				if (lang.hasAvailableLanguage(language)) {
-					result.add(lang);
-				}
-			}
-			return result;
-		}
-
-		/**
-		 * Returns all languages that can be translated from the given language.
-		 *
-		 * @param language the source language (the one being translated from)
-		 * @return a list of languages that the source language supports translation to
-		 */
-		public static List<Language> getLanguagesThatTranslateFrom(Language language) {
-			List<Language> result = new ArrayList<>();
-			for (String lang : language.getAvailableLanguages()) {
-				result.add(Language.fromString(lang));
-			}
-			return result;
-		}
-
-		/**
-		 * Returns any language using the locale code given.
-		 *
-		 * @param localeCode the source language code (ex.,
-		 *                   Language.ENGLISH.getLocale().getLanguage() ; "en")
-		 * @return a Language matching the locale code
-		 */
-		public static Language fromLocaleCode(String localeCode) {
-			for (Language lang : Language.usableValues()) {
-				if (lang.getLocale().getLanguage().equals(localeCode)) {
-					return lang;
-				}
-			}
-			return null;
-		}
-
-		/**
-		 * Returns a string representation of this value (getName() is never used only
-		 * getValue())
-		 *
-		 * @return the same as {@link #getValue()}
-		 */
-		@Override
-		public String toString() {
-			return this.value;
-		}
-
-		/**
-		 * Obtains the currency symbol (e.g., "£", "$", "€", "¥") for the current
-		 * locale. Uses the locale returned by {@link #getLocale()} and the system's
-		 * default currency.
-		 *
-		 * @return the currency symbol as a String (e.g., "GBP" becomes "£" for Engligh
-		 *         locale)
-		 * @throws java.util.MissingResourceException if no currency is defined for the
-		 *                                            locale
-		 */
-		public String getCurrencySymbol() {
-			final Currency currency = Currency.getInstance(this.getLocale());
-			return currency.getSymbol();
-		}
-
-		/**
-		 * Looks up a Language enum constant by matching either: - the language's
-		 * display value or name (case‑insensitive), or - the language's locale language
-		 * code (e.g., "en", "fr").
-		 *
-		 * If no match is found, returns the default system language.
-		 *
-		 * @param str the search string (e.g., "ENGLISH", "English", "en", "FR")
-		 * @return the matching Language, or the default system language
-		 */
-		public static Language fromString(final String str) {
-			for (final Language lang : Language.values()) {
-				if (lang.value.equalsIgnoreCase(str) || lang.getLocale().getLanguage().equalsIgnoreCase(str)
-						|| lang.name().equalsIgnoreCase(str)) {
-					return lang;
-				}
-			}
-			return getDefaultSystemLanguage();
-		}
-
-		/**
-		 * Returns an array of all Language display strings (as returned by toString()).
-		 * Useful for populating dropdown lists with raw values. Combine with
-		 * listOfTranslatedLanguageNames() for translated display names.
-		 *
-		 * 
-		 * @return String[] of all language display names
-		 */
-		public static String[] stringValues() {
-			return Arrays.stream(Language.values()).map(Language::toString).toArray(String[]::new);
-		}
-
-		/**
-		 * Returns an array of Language constants that are both usable AND selected.
-		 * Filters the full list using {@link Language#isUsable()} and
-		 * {@link Language#isSelected()}.
-		 *
-		 * @return Language[] containing only usable+selected languages
-		 */
-		public static Language[] usableValues() {
-			return Arrays.stream(values()).filter(Language::isUsable).filter(Language::isSelected).toArray(Language[]::new);
-		}
-
-		/**
-		 * Returns an array of Language constants that are selected for use. Filters the
-		 * full list using {@link Language#isSelected()}.
-		 *
-		 * @return Language[] containing only selected languages
-		 */
-		public static Language[] selectedValues() {
-			return Arrays.stream(values()).filter(Language::isSelected).toArray(Language[]::new);
-		}
-
-		/**
-		 * Returns an array of display strings for languages that are both usable AND
-		 * selected. Each language's {@link Language#getValue()} is used, and duplicates
-		 * are removed. Combine with listOfTranslatedLanguageNames() for translated
-		 * display names.
-		 * 
-		 * @return String[] of unique display names for usable+selected languages
-		 */
-		public static String[] usableValuesAsStrings() {
-			return Arrays.stream(values())
-					.filter(Language::isUsable)
-					.filter(Language::isSelected)
-					.map(Language::getValue)
-					.distinct()
-					.toArray(String[]::new);
-		}
-
-		/**
-		 * Converts an array of language identifiers (display names or codes) into an
-		 * array of localized, translated language names.
-		 *
-		 * For each input string (e.g., "English", "fr"), it looks up the corresponding
-		 * Language constant, retrieves its Locale, and then asks that Locale to display
-		 * its own language name in that same locale.
-		 *
-		 * Example: input "fr" → Locale.FRENCH → "français" (when displayed in French).
-		 *
-		 * @param usedLanguages input language identifiers (if null then it uses
-		 *                      Language.usableValuesAsStrings())
-		 * @return String[] of unique translated language names, in the same order and
-		 *         usedLanguages
-		 */
-		public static String[] listOfTranslatedLanguageNames(final String[] usedLanguages) {
-			String[] source = (usedLanguages != null) ? usedLanguages : Language.usableValuesAsStrings();
-			Set<String> uniqueNames = new LinkedHashSet<>();
-			for (String code : source) {
-				Locale locale = Language.fromString(code).getLocale();
-				uniqueNames.add(locale.getDisplayName(locale));
-			}
-			return uniqueNames.toArray(new String[0]);
-		}
-	}
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Paths
 	/**
@@ -653,17 +354,16 @@ public class Translator {
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
 	 */
-	public static boolean init(Language defaultLang, Language[] languages, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, boolean feedContentToDatabase,Platform platform, boolean doFullTranslatorTest, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(Locale defaultLang, List<Locale> languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, boolean feedContentToDatabase,Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
 		return init(
 				null,
 				defaultLang,
-				languages,
+				languageSelection,
 				runLanguageDetectorService,
 				universalTranslationMode,
 				redoTranslationsAndModelFiles,
 				feedContentToDatabase,
 				platform,
-				doFullTranslatorTest,
 				debugMode,
 				testingMode,
 				showCriticalErrors,
@@ -721,7 +421,7 @@ public class Translator {
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
 	 */
-	public static boolean init(String libhiberbernate_CFG_XML_Path, Language defaultLang, Language[] languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles,boolean feedContentToDatabase, Platform platform, boolean doFullTranslatorTest, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(String libhiberbernate_CFG_XML_Path, Locale defaultLang, List<Locale> languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles,boolean feedContentToDatabase, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
 		if (!runningMaintenance && doModels) {
 			//
 			runningMaintenance = true;
@@ -736,6 +436,8 @@ public class Translator {
 			T_Log.showIgnored = showIgnoredErrors;
 			if (defaultLang != null) {
 				defaultLanguage = defaultLang;
+			}else{
+				defaultLanguage = Locale.ENGLISH; 
 			}
 			if (libhiberbernate_CFG_XML_Path != null) {
 				libhiberbernate = libhiberbernate_CFG_XML_Path;
@@ -763,16 +465,15 @@ public class Translator {
 			mainPathString = modelPath + "/hf-translator_" + Translator.siteOrAppId; //$NON-NLS-1$
 			languageModelFolder = FolderName.LanguageModels;
 			//
-			if (languageSelection != null) {
-				for (Language availableLanguage : Language.values()) {
-					availableLanguage.selected = false;
+			if (languageSelection == null) {
+				for (Locale availableLanguage : Locale.getAvailableLocales()) {
+					selectedLanguages.add(availableLanguage);
 				}
-				for (Language selectedLanguage : languageSelection) {
-					selectedLanguage.selected = true;
-				}
-			} else {
-				for (Language availableLanguage : Language.values()) {
-					availableLanguage.selected = true;
+				
+			}else{
+				
+				for (Locale selectedLanguage : languageSelection) {
+					selectedLanguages.add(selectedLanguage);
 				}
 			}
 			//
@@ -783,7 +484,7 @@ public class Translator {
 				TranslatorEntity.deleteUnusedTranslations();
 				TranslatorEntity.deleteDuplicateTranslations();
 			}
-			downloadFilesAndCreateModels();
+			downloadFilesAndCreateModels(defaultLanguage,true);
 			redoTranslationsInTable = false;
 			//
 			doModels = false;
@@ -797,18 +498,13 @@ public class Translator {
 			} else {
 				defaultLanguage = runLanguageDetectorOneTime("Testing, testing, is this thing working?"); //$NON-NLS-1$
 			}
-			if (defaultLanguage == null || !defaultLanguage.equals(Language.ENGLISH)) {
+			if (defaultLanguage == null || !defaultLanguage.equals(Locale.ENGLISH)) { 
 				T_Log.log("Language Detection Not Working"); //$NON-NLS-1$
 				return false;
 			}
 			T_Log.log("Language Detection Working"); //$NON-NLS-1$
 			//
-			devTesting_DoFullClassfileTest = doFullTranslatorTest;
-			if (testingMode && devTesting_DoFullClassfileTest) {
-				if (!liveTest()) {
-					return false;
-				}
-			}
+			
 			if(feedContentToDatabase){
 			final TranslateStacker translateStacker = new TranslateStacker();
 			if (contentClasses != null && contentClasses.length > 0) {
@@ -845,8 +541,8 @@ public class Translator {
 					}
 				}
 			}
-			for(String s : Language.stringValues()){
-				translateStacker.add(s);
+			for(Locale l : Locale.getAvailableLocales()){
+				translateStacker.add(l.getDisplayLanguage(Locale.forLanguageTag(defaultLanguage.toLanguageTag())));
 			}
 			translateStacker.feedTranslatorDatabase();
 			}
@@ -870,7 +566,7 @@ public class Translator {
 			TranslatorEntity.deleteUnusedTranslations();
 			TranslatorEntity.deleteDuplicateTranslations();
 			//
-			downloadFilesAndCreateModels();
+			downloadFilesAndCreateModels(defaultLanguage,true);
 			//
 			runningMaintenance = false;
 		}
@@ -903,9 +599,9 @@ public class Translator {
 	/**
 	 * Returns the default system language set during initialization.
 	 *
-	 * @return The default Language object
+	 * @return The default language object
 	 */
-	public static Language getDefaultSystemLanguage() {
+	public static Locale getDefaultSystemLanguage() {
 		return defaultLanguage;
 	}
 
@@ -920,9 +616,9 @@ public class Translator {
 	 * @param langOUT     Target language code (like "fr")
 	 * @return Path to the model storage folder or modle python path
 	 */
-	private static Path getModelDir(final boolean toTranslate, final String langIN, final String langOUT) {
-		String finalLangIN = langIN;
-		String finaLangOUT = langOUT;
+	private static Path getModelDir(final boolean toTranslate, final Locale langIN, final Locale langOUT) {
+		String finalLangIN = langIN.getLanguage();
+		String finaLangOUT = langOUT.getLanguage();
 		if (toTranslate) {
 			return Paths.get(
 					languageModelFolder
@@ -939,9 +635,9 @@ public class Translator {
 	 * @param fileName Name of the file to fetch
 	 * @return Full URL for downloading the specified file
 	 */
-	private static String huggingURL(final Language langIn, final Language langOut, final String fileName) {
-		String localeCodeIn = langIn.getLocale().getLanguage();
-		String localeCodeOut = langOut.getLocale().getLanguage();
+	private static String huggingURL(final Locale langIn, final Locale langOut, final String fileName) {
+		String localeCodeIn = langIn.getLanguage();
+		String localeCodeOut = langOut.getLanguage();
 		return "https://huggingface.co/Helsinki-NLP/opus-mt-" + localeCodeIn + "-" + localeCodeOut + "/resolve/main/" + fileName; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
@@ -949,15 +645,15 @@ public class Translator {
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Python
 	/**
 	 * Ensures that the CTranslate2 model exists for a given language pair. If not,
-	 * generates it via Python script. If this fails, Language is marked un-usable.
+	 * generates it via Python script. If this fails, language is marked un-usable.
 	 *
 	 * @param modelDir Root directory of the model folder
 	 * @param langIN   Source language
 	 * @param langOUT  Target language
-	 * @throws Exception On failure to generate or validate model, Language is
+	 * @throws Exception On failure to generate or validate model, language is
 	 *                   marked un-usable.
 	 */
-	private static void ensureCTranslate2(final Path modelDir, final Language langIN, final Language langOUT) throws Exception {
+	private static void ensureCTranslate2(final Path modelDir, final Locale langIN, final Locale langOUT) throws Exception {
 		try {
 			exportPYFiles();
 			String hashString = sha512(Files.readString(scriptFileGenerate.toPath(), StandardCharsets.UTF_8));
@@ -991,8 +687,8 @@ public class Translator {
 						ToPyFiles.pythonLang,
 						scriptFileGenerate.getAbsolutePath(),
 						modelDir.toAbsolutePath().toString(),
-						langIN.locale.getLanguage(),
-						langOUT.locale.getLanguage(),
+						langIN.getLanguage(),
+						langOUT.getLanguage(),
 						outDir.toAbsolutePath().toString());
 				pb.inheritIO();
 				final Process p = pb.start();
@@ -1020,7 +716,7 @@ public class Translator {
 	 * @param input   Text to translate
 	 * @return List of translated texts or empty list on error
 	 */
-	private static List<String> runCTranslate2(final String langIN, final String langOUT, final String input) {
+	private static List<String> runCTranslate2(final Locale langIN, final Locale langOUT, final String input) {
 		try {
 			exportPYFiles();
 			String hashString = sha512(Files.readString(scriptFileTranslate.toPath(), StandardCharsets.UTF_8));
@@ -1037,24 +733,24 @@ public class Translator {
 			if (hashString.equals(hashFileTranslate)) {
 				Path modelDir = getModelDir(true, langIN, langOUT);
 				String finalInput = input;
-				String finalLangIN = langIN;
+				Locale finalLangIN = langIN;
 				if (!modelDir.toFile().exists()) {
 					BridgeContainer bridge = bridgeLanguages(langIN, langOUT, input);
 					if (bridge != null) {
 						finalInput = bridge.input;
-						finalLangIN = bridge.languageCode;
+						finalLangIN = bridge.locale;
 					} else {
 						finalInput = null;
 						finalLangIN = null;
 					}
 				}
-				if (finalInput != null && !finalInput.isBlank()) {
+				if (finalLangIN!=null &&finalInput != null && !finalInput.isBlank()) {
 					final ProcessBuilder pb = new ProcessBuilder(
 							ToPyFiles.pythonLang,
 							scriptFileTranslate.getAbsolutePath(),
 							modelDir.toAbsolutePath().toString(),
-							finalLangIN,
-							langOUT,
+							finalLangIN.getLanguage(),
+							langOUT.getLanguage(),
 							finalInput);
 					pb.redirectErrorStream(false);
 					final Process p = pb.start();
@@ -1114,11 +810,11 @@ public class Translator {
 	 * @param input        translated text or list
 	 */
 	private static class BridgeContainer {
-		private String languageCode;
+		private Locale locale;
 		private String input;
 
-		private BridgeContainer(final String languageCode, final String input) {
-			this.languageCode = languageCode;
+		private BridgeContainer(final Locale locale, final String input) {
+			this.locale = locale;
 			this.input = input;
 		}
 	}
@@ -1134,13 +830,9 @@ public class Translator {
 	 * @return BridgeContainer Containing translated input data and language code,
 	 *         null if no bridge can be made
 	 */
-	private static BridgeContainer bridgeLanguages(String langIN, String langOUT, String input) throws Exception {
-		Language origional = Language.fromLocaleCode(langIN);
-		Language target = Language.fromLocaleCode(langOUT);
-		for (String l : origional.getAvailableLanguages()) {
-			Language potentialBridge = Language.fromString(l);
-			if (potentialBridge.getAvailableLanguages().contains(target.toString())) {
-				String langBridge = potentialBridge.getLocale().getLanguage();
+	private static BridgeContainer bridgeLanguages(Locale langIN, Locale langOUT, String input) throws Exception {
+		for (Locale langBridge : languagesLinks.get(langIN)) {
+			if (languagesLinks.get(langBridge).contains(langOUT)) {
 				Path modelDir = getModelDir(true, langIN, langBridge);
 				if (modelDir.toFile().exists()) {
 					if (input != null && !input.isBlank()) {
@@ -1148,8 +840,8 @@ public class Translator {
 								ToPyFiles.pythonLang,
 								scriptFileTranslate.getAbsolutePath(),
 								modelDir.toAbsolutePath().toString(),
-								langIN,
-								langBridge,
+								langIN.getLanguage(),
+								langBridge.getLanguage(),
 								input);
 						pb.redirectErrorStream(false);
 						final Process p = pb.start();
@@ -1191,7 +883,7 @@ public class Translator {
 	 * @param input Text to detect the language of.
 	 * @return List of translated texts or empty list on error
 	 */
-	private static Language runLanguageDetectorOneTime(final String input) {
+	private static Locale runLanguageDetectorOneTime(final String input) {
 		try {
 			exportPYFiles();
 			String hashString = sha512(Files.readString(scriptFileDetectLanguage.toPath(), StandardCharsets.UTF_8));
@@ -1259,17 +951,23 @@ public class Translator {
 				double secondConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
 				String thirdLangCode = arr.get(0).get("language").asText(); //$NON-NLS-1$
 				double thirdConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				Language detected = Language.fromLocaleCode(toTwoLetteLanguagerCode(topLangCode));
+				Locale detected = Locale.forLanguageTag(topLangCode.substring(0, 3));
 				if (detected == null && secondConf > 0.4) {
-					detected = Language.fromLocaleCode(toTwoLetteLanguagerCode(secondLangCode));
+					detected = Locale.forLanguageTag(secondLangCode.substring(0, 3));
 				}
 				if (detected == null && thirdConf > 0.4) {
-					detected = Language.fromLocaleCode(toTwoLetteLanguagerCode(thirdLangCode));
+					detected = Locale.forLanguageTag(thirdLangCode.substring(0, 3));
 				}
 				if (detected == null) {
 					return defaultLanguage;
 				}
-				if (detected.isUsable() && detected.isSelected()) {
+				
+				
+				if (!disabledLanguages.contains( detected)) {
+					return detected;
+				}
+				
+				if (universalTranslations) {
 					return detected;
 				}
 			}
@@ -1287,7 +985,7 @@ public class Translator {
 	 * @param input Text to detect the language of.
 	 * @return List of translated texts or empty list on error
 	 */
-	private static Language runLanguageDetectorService(final String input) {
+	private synchronized static Locale runLanguageDetectorService(final String input) {
 		synchronized (processLock) {
 			if (persistentProcess == null || !persistentProcess.isAlive()) {
 				try {
@@ -1360,17 +1058,21 @@ public class Translator {
 				double secondConf = arr.get(1).get("confidence").asDouble(); //$NON-NLS-1$
 				String thirdLangCode = arr.get(2).get("language").asText(); //$NON-NLS-1$
 				double thirdConf = arr.get(2).get("confidence").asDouble(); //$NON-NLS-1$
-				Language detected = Language.fromLocaleCode(toTwoLetteLanguagerCode(topLangCode));
+				Locale detected = Locale.forLanguageTag(topLangCode.substring(0, 3));
 				if (detected == null && secondConf > 0.4) {
-					detected = Language.fromLocaleCode(toTwoLetteLanguagerCode(secondLangCode));
+					detected = Locale.forLanguageTag(secondLangCode.substring(0, 3));
 				}
 				if (detected == null && thirdConf > 0.4) {
-					detected = Language.fromLocaleCode(toTwoLetteLanguagerCode(thirdLangCode));
+					detected = Locale.forLanguageTag(thirdLangCode.substring(0, 3));
 				}
 				if (detected == null) {
 					return null;
 				}
-				if (detected.isUsable() && detected.isSelected()) {
+				if (!disabledLanguages.contains( detected)) {
+					return detected;
+				}
+				
+				if (universalTranslations) {
 					return detected;
 				}
 				return null;
@@ -1412,12 +1114,6 @@ public class Translator {
 			}
 			thread = null;
 		}
-	}
-
-	private static String toTwoLetteLanguagerCode(String conlidCode) {
-		String iso639_3 = conlidCode.substring(0, 3);
-		ULocale locale = ULocale.forLanguageTag(iso639_3);
-		return locale.getLanguage(); // gives "en", "fr", etc. if mapping exists
 	}
 
 	/**
@@ -1622,30 +1318,35 @@ public class Translator {
 	 * Downloads model files for all language pairs and creates corresponding
 	 * language models. This method iterates over all available languages, downloads
 	 * the required model files, and handles errors by deleting the model directory
-	 * if a download fails and marking the Language as un-usable.
+	 * if a download fails and marking the language as un-usable.
 	 *
 	 * @throws Exception If an error occurs during the download or file handling
-	 *                   process. Marks the Language as un-usable.
+	 *                   process. Marks the language as un-usable.
 	 */
-	private static void downloadFilesAndCreateModels() {
-		for (final Language lang2 : Language.selectedValues()) {
-			final Language lang1 = getDefaultSystemLanguage();
+	private static void downloadFilesAndCreateModels(Locale lang, boolean firstCall) {
+		for (final Locale lang2 : selectedLanguages) {
 			boolean defaultToCleintSuccess = false;
-			if ((!lang1.equals(lang2)) && (!lang1.getLocale().getLanguage().equals(lang2.getLocale().getLanguage()))) {
+			if ((!lang.equals(lang2)) && (!lang.getLanguage().equals(lang2.getLanguage()))) {
 				try (HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()) {
-					Path modelDir = getModelDir(false, lang1.getLocale().getLanguage(), lang2.getLocale().getLanguage());
+											Path modelDir = getModelDir(false, lang, lang2);
+
 					try {
 						Files.createDirectories(modelDir);
-						T_Log.log("Downloading Model: " + lang1 + "-" + lang2); //$NON-NLS-1$ //$NON-NLS-2$
-						downloadModelFiles(client, modelDir, lang1, lang2);
+						T_Log.log("Downloading Model: " + lang + "-" + lang2); //$NON-NLS-1$ //$NON-NLS-2$
+						downloadModelFiles(client, modelDir, lang, lang2);
 						defaultToCleintSuccess = true;
-						defaultLanguage.addToAvailableLanguages(lang2);
+						languagesLinks.get(lang).add(lang2);
+						
+						
+						
+						
+						
 					} catch (final Exception e) {
 						if (!universalTranslations) {
-							lang2.usable = false;
-						}
+								disabledLanguages.add(lang2);
+							}
 						T_Log.log(
-								"Download Failed For " + lang1 + "-" + lang2 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+								"Download Failed For " + lang + "-" + lang2 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 										.toAbsolutePath(),
 								e);
 						if (delete_Folder(modelDir)) {
@@ -1654,87 +1355,27 @@ public class Translator {
 							T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
 						}
 					}
-					modelDir = getModelDir(false, lang2.getLocale().getLanguage(), lang1.getLocale().getLanguage());
+					
+					
+					if (defaultToCleintSuccess) {
 					try {
+							 modelDir = getModelDir(false, lang2, lang);
 						Files.createDirectories(modelDir);
-						T_Log.log("Downloading Model: " + lang2 + "-" + lang1); //$NON-NLS-1$ //$NON-NLS-2$
-						downloadModelFiles(client, modelDir, lang2, lang1);
-						if (defaultToCleintSuccess) {
-							lang2.usable = true;
-							lang2.addToAvailableLanguages(lang1);
-							downloadFilesAndCreateInterClientModels(lang1, lang2);
-						}
-					} catch (final Exception e) {
-						if (!universalTranslations) {
-							lang2.usable = false;
-						}
-						T_Log.log(
-								"Download Failed For " + lang2 + "-" + lang1 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-										.toAbsolutePath(),
-								e);
-						if (delete_Folder(modelDir)) {
-							T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
-						} else {
-							T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
-						}
-					}
-				}
-			}
-		}
-	}
-
-	/**
-	 * Downloads model files between all language pairs and creates corresponding
-	 * language models. This method iterates over all available languages, downloads
-	 * the required model files, and handles errors by deleting the model directory
-	 * if a download fails and marking the Language as un-usable if universal
-	 * translation not set.
-	 * 
-	 * @param lang1 From downloadFilesAndCreateModels.
-	 * @param lang2 From downloadFilesAndCreateModels
-	 *
-	 * @throws Exception If an error occurs during the download or file handling
-	 *                   process. Marks the Language as un-usable.
-	 */
-	private static void downloadFilesAndCreateInterClientModels(Language lang1, Language lang2) {
-		if (universalTranslations) {
-			for (final Language lang3 : Language.selectedValues()) {
-				if ((!lang3.equals(lang1)) && (!lang3.equals(lang2))
-						&& (!lang3.getLocale().getLanguage().equals(lang1.getLocale().getLanguage()))
-						&& (!lang3.getLocale().getLanguage().equals(lang2.getLocale().getLanguage()))) {
-					try (HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()) {
-						Path modelDir = getModelDir(false, lang2.getLocale().getLanguage(), lang3.getLocale().getLanguage());
-						try {
-							Files.createDirectories(modelDir);
-							T_Log.log("Downloading Model: " + lang2 + "-" + lang3); //$NON-NLS-1$ //$NON-NLS-2$
-							downloadModelFiles(client, modelDir, lang2, lang3);
-							lang2.addToAvailableLanguages(lang3);
+							T_Log.log("Downloading Model: " + lang2 + "-" + lang); //$NON-NLS-1$ //$NON-NLS-2$
+							downloadModelFiles(client, modelDir, lang2, lang);
+							languagesLinks.get(lang2).add(lang);
+								
+							
+							if (firstCall && universalTranslations) {
+								downloadFilesAndCreateModels(lang2,false);
+							}
+							
 						} catch (final Exception e) {
 							if (!universalTranslations) {
-								lang3.usable = false;
+								disabledLanguages.add(lang2);
 							}
 							T_Log.log(
-									"Download Failed For " + lang2 + "-" + lang3 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-											.toAbsolutePath(),
-									e);
-							if (delete_Folder(modelDir)) {
-								T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
-							} else {
-								T_Log.log("Failed To Delete Model Folder"); //$NON-NLS-1$
-							}
-						}
-						modelDir = getModelDir(false, lang3.getLocale().getLanguage(), lang2.getLocale().getLanguage());
-						try {
-							Files.createDirectories(modelDir);
-							T_Log.log("Downloading Model: " + lang3 + "-" + lang2); //$NON-NLS-1$ //$NON-NLS-2$
-							downloadModelFiles(client, modelDir, lang3, lang2);
-							lang3.addToAvailableLanguages(lang2);
-						} catch (final Exception e) {
-							if (!universalTranslations) {
-								lang3.usable = false;
-							}
-							T_Log.log(
-									"Download Failed For " + lang3 + "-" + lang2 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+									"Download Failed For " + lang2 + "-" + lang + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 											.toAbsolutePath(),
 									e);
 							if (delete_Folder(modelDir)) {
@@ -1749,6 +1390,7 @@ public class Translator {
 		}
 	}
 
+	
 	/**
 	 * Downloads individual model files for a given language pair using the provided
 	 * HTTP client. Checks for existing files and decides whether to re-download the
@@ -1758,11 +1400,11 @@ public class Translator {
 	 *
 	 * @param client   The HTTP client used for downloading files.
 	 * @param modelDir The directory where the model files will be saved.
-	 * @param langIn   The source Language for the translation model.
-	 * @param langOut  The target Language for the translation model.
+	 * @param langIn   The source language for the translation model.
+	 * @param langOut  The target language for the translation model.
 	 * @throws Exception If an error occurs during file download or validation.
 	 */
-	private static void downloadModelFiles(final HttpClient client, final Path modelDir, final Language langIn, final Language langOut) throws Exception {
+	private static void downloadModelFiles(final HttpClient client, final Path modelDir, final Locale langIn, final Locale langOut) throws Exception {
 		Path outPath = null;
 		for (final String file : MODEL_FILES_TO_DOWNLOAD) {
 			outPath = modelDir.resolve(file);
@@ -1812,10 +1454,10 @@ public class Translator {
 	 * specified language. The method ensures the directory exists and downloads
 	 * necessary files from CDN sources.
 	 *
-	 * @param language The Language for which to download Flatpickr resources.
+	 * @param language The language for which to download Flatpickr resources.
 	 */
-	private static void downloadFlatpickerFile(final Language language) {
-		if (language != Language.ENGLISH) {
+	private static void downloadFlatpickerFile(final Locale language) {
+		if (language != Locale.ENGLISH) {
 			try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()) {
 				final String flatpickrResourcePath = ToFlatpickr.flatpickrRelativePath;
 				// Get the directory where the JAR is located
@@ -1839,7 +1481,7 @@ public class Translator {
 						doFlatpickerFiles = false;
 					}
 					// Download locale file
-					final String localeFile = language.getLocale().getLanguage() + ".js"; //$NON-NLS-1$
+					final String localeFile = language.getLanguage() + ".js"; //$NON-NLS-1$
 					downloadFile(
 							client,
 							"https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/" + localeFile, //$NON-NLS-1$
@@ -2033,7 +1675,7 @@ public class Translator {
 		 *            language)
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
-		public <T> Map<T, String> translate(final Language to) {
+		public <T> Map<T, String> translate(final Locale to) {
 			return translate(null, to);
 		}
 
@@ -2047,7 +1689,7 @@ public class Translator {
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
 		@SuppressWarnings("unchecked")
-		public <T> Map<T, String> translate(final Language from, final Language to) {
+		public <T> Map<T, String> translate(final Locale from, final Locale to) {
 			final Map<T, String> results = (Map<T, String>) Translator.translate(
 					from != null ? from : defaultLanguage,
 					to,
@@ -2067,7 +1709,7 @@ public class Translator {
 		 *            language)
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
-		public <T> Map<T, String> translate_ModelOnly(final Language to) {
+		public <T> Map<T, String> translate_ModelOnly(final Locale to) {
 			return translate_ModelOnly(null, to);
 		}
 
@@ -2082,7 +1724,7 @@ public class Translator {
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
 		@SuppressWarnings("unchecked")
-		public <T> Map<T, String> translate_ModelOnly(final Language from, final Language to) {
+		public <T> Map<T, String> translate_ModelOnly(final Locale from, final Locale to) {
 			final Map<T, String> results = (Map<T, String>) Translator
 					.translate_OnlyUseModel(from != null ? from : defaultLanguage, to, this.getCombinedList(), this.doAsList);
 			return results;
@@ -2100,7 +1742,7 @@ public class Translator {
 		 *            language)
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
-		public <T> Map<T, String> translateAndFeedTranslatorDatabase(final Language to) {
+		public <T> Map<T, String> translateAndFeedTranslatorDatabase(final Locale to) {
 			return translateAndFeedTranslatorDatabase(defaultLanguage, to);
 		}
 
@@ -2117,7 +1759,7 @@ public class Translator {
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
 		@SuppressWarnings("unchecked")
-		public <T> Map<T, String> translateAndFeedTranslatorDatabase(final Language from, final Language to) {
+		public <T> Map<T, String> translateAndFeedTranslatorDatabase(final Locale from, final Locale to) {
 			Map<T, String> result = new LinkedHashMap<>();
 			result = (Map<T, String>) Translator.translate(
 					from != null ? from : defaultLanguage,
@@ -2128,7 +1770,7 @@ public class Translator {
 			new Thread(
 					() -> {
 						T_Log.log("Feeding Translator In New Thread"); //$NON-NLS-1$
-						for (final Language l : languageInUseFirst(Language.usableValues(), to)) {
+						for (final Locale l : languageInUseFirst(getWorkingLanguages(), to)) {
 							if ((!l.equals(getDefaultSystemLanguage()) && (!l.equals(to)))) {
 								Translator.translate(
 										from != null ? from : defaultLanguage,
@@ -2148,7 +1790,7 @@ public class Translator {
 		 *
 		 */
 		public void feedTranslatorDatabase() {
-			for (final Language l : Language.usableValues()) {
+			for (final Locale l : getWorkingLanguages()) {
 				if (!l.equals(getDefaultSystemLanguage())) {
 					Translator.translate(
 							defaultLanguage,
@@ -2161,19 +1803,19 @@ public class Translator {
 		}
 
 		/**
-		 * Returns all Languages with the target Language first
+		 * Returns all Languages with the target Locale first
 		 *
 		 * @param langauge The target language.
 		 */
-		private static Language[] languageInUseFirst(final Language[] languages, final Language languageInUse) {
-			final List<Language> ordered = new ArrayList<>();
+		private static Locale[] languageInUseFirst(final Locale[] languages, final Locale languageInUse) {
+			final List<Locale> ordered = new ArrayList<>();
 			ordered.add(languageInUse);
-			for (final Language lang : languages) {
+			for (final Locale lang : languages) {
 				if (lang != languageInUse) {
 					ordered.add(lang);
 				}
 			}
-			return ordered.toArray(new Language[0]);
+			return ordered.toArray(new Locale[0]);
 		}
 	}
 
@@ -2182,9 +1824,9 @@ public class Translator {
 	 * Detects the language a single text input.
 	 *
 	 * @param input Text needed to detect the language
-	 * @return Language of text input
+	 * @return language of text input
 	 */
-	public static Language detectLanguage(final String input) {
+	public static Locale detectLanguage(final String input) {
 		if (alwaysRunDetector) {
 			return runLanguageDetectorService(input);
 		}
@@ -2201,7 +1843,7 @@ public class Translator {
 	 * @return The translated string or the original object's string representation
 	 *         if no translation is available.
 	 */
-	public static String translate(final Language to, final Object input) {
+	public static String translate(final Locale to, final Object input) {
 		return translate(null, to, input, redoTranslationsInTable);
 	}
 
@@ -2215,7 +1857,7 @@ public class Translator {
 	 * @return The translated string or the original object's string representation
 	 *         if no translation is available.
 	 */
-	public static String translate(final Language from, final Language to, final Object input) {
+	public static String translate(final Locale from, final Locale to, final Object input) {
 		return translate(from, to, input, redoTranslationsInTable);
 	}
 
@@ -2232,7 +1874,7 @@ public class Translator {
 	 * @return The translated string or the original object's string representation
 	 *         if no translation is available.
 	 */
-	public static String translate(final Language from, final Language to, final Object input, final boolean recreateTableEntry) {
+	public static String translate(final Locale from, final Locale to, final Object input, final boolean recreateTableEntry) {
 		if (input == null) {
 			T_Log.log("Null At Translate"); //$NON-NLS-1$
 			return null;
@@ -2241,12 +1883,12 @@ public class Translator {
 			T_Log.log("Not Correct Input Type At Translate"); //$NON-NLS-1$
 			return null;
 		}
-		if (to.isUsable()) {
-			String langIN = defaultLanguage.getLocale().getLanguage();
+		if (!disabledLanguages.contains(to)) {
+			Locale langIN = defaultLanguage;
 			if (from != null) {
-				langIN = from.getLocale().getLanguage();
+				langIN = from;
 			}
-			String langOUT = to.getLocale().getLanguage();
+			Locale langOUT = to;
 			try {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
@@ -2281,7 +1923,7 @@ public class Translator {
 	 * @return A map of input objects to their translations or the original string
 	 *         if no translation is available..
 	 */
-	public static <T> Map<T, String> translate(final Language to, final List<T> inputs) {
+	public static <T> Map<T, String> translate(final Locale to, final List<T> inputs) {
 		return translate(null, to, inputs, true, redoTranslationsInTable);
 	}
 
@@ -2298,7 +1940,7 @@ public class Translator {
 	 * @return A map of input objects to their translations or the original string
 	 *         if no translation is available..
 	 */
-	public static <T> Map<T, String> translate(final Language to, final List<T> inputs, final boolean doAsList) {
+	public static <T> Map<T, String> translate(final Locale to, final List<T> inputs, final boolean doAsList) {
 		return translate(null, to, inputs, doAsList, redoTranslationsInTable);
 	}
 
@@ -2314,7 +1956,7 @@ public class Translator {
 	 * @return A map of input objects to their translations or the original string
 	 *         if no translation is available..
 	 */
-	public static <T> Map<T, String> translate(final Language from, final Language to, final List<T> inputs) {
+	public static <T> Map<T, String> translate(final Locale from, final Locale to, final List<T> inputs) {
 		return translate(null, to, inputs, true, redoTranslationsInTable);
 	}
 
@@ -2331,7 +1973,7 @@ public class Translator {
 	 * @return A map of input objects to their translations or the original string
 	 *         if no translation is available..
 	 */
-	public static <T> Map<T, String> translate(final Language from, final Language to, final List<T> inputs, final boolean doAsList) {
+	public static <T> Map<T, String> translate(final Locale from, final Locale to, final List<T> inputs, final boolean doAsList) {
 		return translate(null, to, inputs, doAsList, redoTranslationsInTable);
 	}
 
@@ -2350,17 +1992,17 @@ public class Translator {
 	 *         if no translation is available..
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> Map<T, String> translate(final Language from, final Language to, final List<T> inputs, final boolean doAsList, final boolean recreateTableEntrys) {
+	public static <T> Map<T, String> translate(final Locale from, final Locale to, final List<T> inputs, final boolean doAsList, final boolean recreateTableEntrys) {
 		if (inputs == null) {
 			return null;
 		}
 		Map<T, String> results = new LinkedHashMap<>();
-		if (to.isUsable()) {
-			String langIN = defaultLanguage.getLocale().getLanguage();
+		if (!disabledLanguages.contains(to)) {
+			Locale langIN = defaultLanguage;
 			if (from != null) {
-				langIN = from.getLocale().getLanguage();
+				langIN = from;
 			}
-			String langOUT = to.getLocale().getLanguage();
+			Locale langOUT = to;
 			try {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
@@ -2412,7 +2054,7 @@ public class Translator {
 	 * @return The translated string or the original value's string representation
 	 *         if no translation is available.
 	 */
-	public static String translate_OnlyUseModel(final Language to, final Object input) {
+	public static String translate_OnlyUseModel(final Locale to, final Object input) {
 		return translate_OnlyUseModel(null, to, input);
 	}
 
@@ -2426,7 +2068,7 @@ public class Translator {
 	 * @return The translated string or the original value's string representation
 	 *         if no translation is available.
 	 */
-	public static String translate_OnlyUseModel(final Language from, final Language to, final Object input) {
+	public static String translate_OnlyUseModel(final Locale from, final Locale to, final Object input) {
 		if (input == null) {
 			T_Log.log("Null At Translate"); //$NON-NLS-1$
 			return null;
@@ -2435,12 +2077,12 @@ public class Translator {
 			T_Log.log("Not Correct Input Type At Translate"); //$NON-NLS-1$
 			return null;
 		}
-		if (to.isUsable()) {
-			String langIN = defaultLanguage.getLocale().getLanguage();
+		if (!disabledLanguages.contains(to)) {
+			Locale langIN = defaultLanguage;
 			if (from != null) {
-				langIN = from.getLocale().getLanguage();
+				langIN = from;
 			}
-			String langOUT = to.getLocale().getLanguage();
+			Locale langOUT = to;
 			try {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
@@ -2471,7 +2113,7 @@ public class Translator {
 	 * @return A map of input Translatable values to their translations or the
 	 *         original string if no translation is available..
 	 */
-	public static <T> Map<T, String> translate_OnlyUseModel(final Language to, final List<T> inputs) {
+	public static <T> Map<T, String> translate_OnlyUseModel(final Locale to, final List<T> inputs) {
 		return translate_OnlyUseModel(null, to, inputs, true);
 	}
 
@@ -2488,36 +2130,35 @@ public class Translator {
 	 * @return A map of input Translatable values to their translations or the
 	 *         original string if no translation is available..
 	 */
-	public static <T> Map<T, String> translate_OnlyUseModel(final Language from, final Language to, final List<T> inputs, final boolean doAsList) {
+	public static <T> Map<T, String> translate_OnlyUseModel(final Locale from, final Locale to, final List<T> inputs, final boolean doAsList) {
 		if (inputs == null) {
 			return null;
 		}
 		Map<T, String> results = new LinkedHashMap<>();
-		if (to.isUsable()) {
-			String langIN = defaultLanguage.getLocale().getLanguage();
+		if (!disabledLanguages.contains(to)) {
+			Locale FROM = defaultLanguage;
 			if (from != null) {
-				langIN = from.getLocale().getLanguage();
+				FROM = from;
 			}
-			String langOUT = to.getLocale().getLanguage();
 			try {
 				while (runningMaintenance) {
 					Thread.sleep(1000);
 				}
-				if (!langIN.equals(langOUT)) {
-					final String modelCode = langIN + "-" + langOUT; //$NON-NLS-1$
+				if (!FROM.equals(to)) {
+					final String modelCode = FROM + "-" + to; //$NON-NLS-1$
 					if (doAsList) {
-						results = doAsList(langIN, langOUT, modelCode, inputs, false);
+						results = doAsList(FROM, to, modelCode, inputs, false);
 					}
 					if (!results.isEmpty()) {
 						return results;
 					}
-					results = doAsStrings(langIN, langOUT, modelCode, inputs, false);
+					results = doAsStrings(FROM, to, modelCode, inputs, false);
 					if (!results.isEmpty()) {
 						return results;
 					}
 				}
 			} catch (final Exception e) {
-				T_Log.log("Translation Failed For " + langIN + " - " + langOUT, e); //$NON-NLS-1$ //$NON-NLS-2$
+				T_Log.log("Translation Failed For " + FROM + " - " + to, e); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		}
 		results = new LinkedHashMap<>();
@@ -2660,7 +2301,7 @@ public class Translator {
 	 *         the translation fails, keyed by the original input objects.
 	 * @throws Exception If an error occurs during translation or processing.
 	 */
-	private static <T> Map<T, String> doAsList(final String langIN, final String langOUT, final String modelCode, final List<T> inputs, final boolean doTranslation) throws Exception {
+	private static <T> Map<T, String> doAsList(final Locale langIN, final Locale langOUT, final String modelCode, final List<T> inputs, final boolean doTranslation) throws Exception {
 		final Map<T, String> results = new LinkedHashMap<>();
 		final List<List<T>> chunks = splitIntoChunks(inputs, modelCharLimit);
 		for (final List<T> chunk : chunks) {
@@ -2711,7 +2352,7 @@ public class Translator {
 	 *         the translation fails, keyed by the original input objects.
 	 * @throws Exception If an error occurs during translation or processing.
 	 */
-	private static <T> Map<T, String> doAsStrings(final String langIN, final String langOUT, final String modelCode, final List<T> inputs, final boolean doTranslateion) throws Exception {
+	private static <T> Map<T, String> doAsStrings(final Locale langIN, final Locale langOUT, final String modelCode, final List<T> inputs, final boolean doTranslateion) throws Exception {
 		final Map<T, String> results = new LinkedHashMap<>();
 		final List<List<T>> chunks = splitIntoChunks(inputs, modelCharLimit);
 		for (final List<T> chunk : chunks) {
@@ -2760,7 +2401,7 @@ public class Translator {
 	 *         translation fails.
 	 * @throws Exception If an error occurs during translation or processing.
 	 */
-	private static String doOneString(final String langIN, final String langOUT, final String modelCode, final Object input, final boolean doTranslateion) throws Exception {
+	private static String doOneString(final Locale langIN, final Locale langOUT, final String modelCode, final Object input, final boolean doTranslateion) throws Exception {
 		if (input == null) {
 			T_Log.log("Null At Translate"); //$NON-NLS-1$
 			return null;
@@ -2836,7 +2477,30 @@ public class Translator {
 		}
 		return (o).toString();
 	}
+	
+	/**
+	 * /** Detects if a language is read right-to-left otherwise left-to-right.
+	 *
+	 * @param language The locale to be used.
+	 * @return A boolean true if read right-to-left otherwise false.
+	 */
+	public static boolean isRightToLeft(Locale language) {
+    return Bidi.requiresBidi(
+        language.getDisplayName(language).toCharArray(),
+        0,
+        language.getDisplayName(language).length()
+        );
+    }
 
+	/**
+	 * /** Returns the currency symbol for the locale provided.
+	 *
+	 * @param Locale The locale to be used.
+	 * @return A String, the currency symbol the the locale.
+	 */
+	public static String getCurrencySymbol(Locale locale){
+		return Currency.getInstance(locale).getSymbol();
+	}
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Format/Parse
 	/**
 	 * Formats a numeric value according to the specified language's locale.
@@ -2846,8 +2510,8 @@ public class Translator {
 	 * @return A formatted string representation of the number in the given locale.
 	 * @throws Exception If parsing or formatting fails.
 	 */
-	public static String formatNumber(Language language, String value) throws Exception {
-		Locale locale = language.getLocale();
+	public static String formatNumber(Locale language, String value) throws Exception {
+		Locale locale = language;
 		NumberFormat numberFormat = NumberFormat.getNumberInstance(locale);
 		if (value.contains(".")) { //$NON-NLS-1$
 			double num = Double.parseDouble(value);
@@ -2865,8 +2529,8 @@ public class Translator {
 	 * @return A formatted string representation of the number in the given locale.
 	 * @throws Exception If formatting fails.
 	 */
-	public static String formatNumber(Language language, Number value) throws Exception {
-		Locale locale = language.getLocale();
+	public static String formatNumber(Locale language, Number value) throws Exception {
+		Locale locale = language;
 		NumberFormat numberFormat = NumberFormat.getNumberInstance(locale);
 		return numberFormat.format(value);
 	}
@@ -2879,7 +2543,7 @@ public class Translator {
 	 * @return A formatted localized date and time string.
 	 * @throws Exception If parsing or formatting fails.
 	 */
-	public static String formatTimestamp(Language language, Timestamp timestamp) {
+	public static String formatTimestamp(Locale language, Timestamp timestamp) {
 		LocalDateTime dateTime = timestamp.toLocalDateTime(); // no string conversion
 		return formatLocalDateTime(language, dateTime);
 	}
@@ -2893,7 +2557,7 @@ public class Translator {
 	 * @return A formatted localized date and time string.
 	 * @throws Exception If parsing or formatting fails.
 	 */
-	public static String formatTimestamp(Language language, String timestamp) {
+	public static String formatTimestamp(Locale language, String timestamp) {
 		// First, parse into LocalDateTime using the known format of
 		// Timestamp.toString()
 		DateTimeFormatter parser = DateTimeFormatter
@@ -2902,8 +2566,8 @@ public class Translator {
 		return formatLocalDateTime(language, dateTime);
 	}
 
-	public static String formatLocalDateTime(Language language, LocalDateTime dateTime) {
-		Locale locale = language.getLocale();
+	public static String formatLocalDateTime(Locale language, LocalDateTime dateTime) {
+		Locale locale = language;
 		DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(locale);
 		return dateTime.format(formatter);
 	}
@@ -2915,9 +2579,9 @@ public class Translator {
 	 * @param timestamp The timestamp to convert.
 	 * @return A formatted localized month-year string.
 	 */
-	public static String formatTimestamp_MonthYear(final Language language, final Timestamp timestamp) {
+	public static String formatTimestamp_MonthYear(final Locale language, final Timestamp timestamp) {
 		final YearMonth yearMonth = YearMonth.from(timestamp.toLocalDateTime());
-		final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM yyyy").withLocale(language.getLocale()); //$NON-NLS-1$
+		final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM yyyy").withLocale(language); //$NON-NLS-1$
 		return yearMonth.format(formatter);
 	}
 
@@ -2929,7 +2593,7 @@ public class Translator {
 	 *                 date.
 	 * @return A formatted localized date string, or null if parsing fails.
 	 */
-	public static String formatDate(Language language, String dateStr) {
+	public static String formatDate(Locale language, String dateStr) {
 		if (dateStr == null || dateStr.isBlank())
 			return null;
 		// Extract the date part (before space or 'T')
@@ -2939,7 +2603,7 @@ public class Translator {
 		} else if (dateStr.contains("T")) { //$NON-NLS-1$
 			datePart = dateStr.substring(0, dateStr.indexOf('T'));
 		}
-		Locale locale = language.getLocale();
+		Locale locale = language;
 		DateTimeFormatter outputFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale);
 		LocalDate localDate = null;
 		// Add "yyyy-MM-dd" (standard for Timestamp date part) and keep others
@@ -2963,7 +2627,7 @@ public class Translator {
 	 *                 time.
 	 * @return A formatted localized time string, or null if parsing fails.
 	 */
-	public static String formatTime(Language language, String timeStr) {
+	public static String formatTime(Locale language, String timeStr) {
 		if (timeStr == null || timeStr.isBlank())
 			return null;
 		// Extract the time part (after first space or after 'T')
@@ -2979,7 +2643,7 @@ public class Translator {
 		if (timePart.contains(".")) { //$NON-NLS-1$
 			timePart = timePart.substring(0, timePart.indexOf('.'));
 		}
-		Locale locale = language.getLocale();
+		Locale locale = language;
 		DateTimeFormatter outputFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).withLocale(locale);
 		LocalTime localTime = null;
 		String[] formats = { "HH:mm:ss", "HH:mm", "HH:mm:ss.SSS", "HH:mm:ss.SSSSSS", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
@@ -3005,8 +2669,8 @@ public class Translator {
 	 * @return A formatted localized currency string.
 	 * @throws Exception If parsing or formatting fails.
 	 */
-	public static String formatCurrency(Language language, String currencyStr) throws Exception {
-		Locale locale = language.getLocale();
+	public static String formatCurrency(Locale language, String currencyStr) throws Exception {
+		Locale locale = language;
 		NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(locale);
 		String numberPart = currencyStr.replaceAll("[^\\d.,]", "").trim(); //$NON-NLS-1$ //$NON-NLS-2$
 		double amount = Double.parseDouble(numberPart.replace(",", "")); //$NON-NLS-1$ //$NON-NLS-2$
@@ -3021,7 +2685,7 @@ public class Translator {
 	 *                   contain time).
 	 * @return A parsed Date object, or null if parsing fails.
 	 */
-	public static Date parseDate(final Language language, final String dateString) {
+	public static Date parseDate(final Locale language, final String dateString) {
 		if (dateString == null || dateString.isBlank())
 			return null;
 		// Extract the date part (before space or 'T')
@@ -3031,7 +2695,7 @@ public class Translator {
 		} else if (dateString.contains("T")) { //$NON-NLS-1$
 			datePart = dateString.substring(0, dateString.indexOf('T'));
 		}
-		final Locale locale = language.getLocale();
+		final Locale locale = language;
 		final List<String> patterns = Arrays.asList(
 				"yyyy-MM-dd", //$NON-NLS-1$
 				"yyyy/MM/dd", //$NON-NLS-1$
@@ -3085,7 +2749,7 @@ public class Translator {
 	 * @param timeStr  A time string to parse (may also contain date part).
 	 * @return A parsed Time object, or null if parsing fails.
 	 */
-	public static Time parseTime(final Language language, String timeStr) {
+	public static Time parseTime(final Locale language, String timeStr) {
 		if (timeStr == null || timeStr.isBlank()) {
 			T_Log.log("Null or empty time string"); //$NON-NLS-1$
 			return null;
@@ -3137,7 +2801,7 @@ public class Translator {
 		T_Log.log("Could not parse time: " + cleaned + " (original: " + timeStr + ")"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 		return null;
 	}
-
+	
 	/**
 	 * Builds a list of locale-aware DateTimeFormatters for parsing times.
 	 *
@@ -3145,162 +2809,51 @@ public class Translator {
 	 *               formatters.
 	 * @return A list of DateTimeFormatter objects specific to the given locale.
 	 */
-	private static List<DateTimeFormatter> buildLocaleAwareFormatters(Language language) {
+	public static List<DateTimeFormatter> buildLocaleAwareFormatters(Locale language) {
 		final List<DateTimeFormatter> formatters = new ArrayList<>();
 		// Locale-specific formatter order (12-hour formats first for US, 24-hour first
 		// for others)
-		if (Language.USA.equals(language) || Language.CANADA.equals(language)) {
+		if (Locale.US.equals(language) || Locale.CANADA.equals(language)) {
 			formatters.addAll(
 					Arrays.asList(
-							DateTimeFormatter.ofPattern("h:mm a", language.getLocale()), //$NON-NLS-1$
-							DateTimeFormatter.ofPattern("hh:mm a", language.getLocale()), //$NON-NLS-1$
-							DateTimeFormatter.ofPattern("h:mma", language.getLocale()), //$NON-NLS-1$
-							DateTimeFormatter.ofPattern("hh:mma", language.getLocale()), //$NON-NLS-1$
-							DateTimeFormatter.ofPattern("HH:mm", language.getLocale()), //$NON-NLS-1$
-							DateTimeFormatter.ofPattern("H:mm", language.getLocale()))); //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("h:mm a", language), //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("hh:mm a", language), //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("h:mma", language), //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("hh:mma", language), //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("HH:mm", language), //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("H:mm", language))); //$NON-NLS-1$
 		} else {
 			formatters.addAll(
 					Arrays.asList(
-							DateTimeFormatter.ofPattern("HH:mm", language.getLocale()), //$NON-NLS-1$
-							DateTimeFormatter.ofPattern("H:mm", language.getLocale()), //$NON-NLS-1$
-							DateTimeFormatter.ofPattern("HH:mm:ss", language.getLocale()), //$NON-NLS-1$
-							DateTimeFormatter.ofPattern("hh:mm a", language.getLocale()), //$NON-NLS-1$
-							DateTimeFormatter.ofPattern("h:mm a", language.getLocale()))); //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("HH:mm", language), //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("H:mm", language), //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("HH:mm:ss", language), //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("hh:mm a", language), //$NON-NLS-1$
+							DateTimeFormatter.ofPattern("h:mm a", language))); //$NON-NLS-1$
 		}
 		return formatters;
 	}
 
-	/**
-	 * Determines the time of day based on current system time in the specified
-	 * language's zone.
-	 *
-	 * @param language The language whose time zone will be used.
-	 * @return An integer representing the time of day: 0 for morning, 1 for
-	 *         afternoon, 2 for evening.
-	 */
-	public static int determinTimeOfDay(final Language language) {
-		final ZonedDateTime zonedDateTime = ZonedDateTime.now(language.getZoneId());
-		final LocalTime now = zonedDateTime.toLocalTime();
-		if (now.isBefore(LocalTime.NOON)) {
-			return 0;
-		}
-		if (now.isBefore(LocalTime.of(18, 0))) {
-			return 1;
-		}
-		return 2;
-	}
-
-	/**
-	 * Tests every translation method using all settings, full translator live
-	 * enviroment test.
-	 * 
-	 */
-	private static boolean liveTest() {
-		try {
-			TranslateStacker tester = new TranslateStacker().addAll(TestContent.values());
-			//
-			tester.feedTranslatorDatabase();
-			tester.setReCreate(true);
-			tester.feedTranslatorDatabase();
-			tester.setReCreate(false);
-			tester.setProcessAsList(false);
-			tester.feedTranslatorDatabase();
-			tester.setProcessAsList(true);
-			//
-			tester.setReCreate(true);
-			tester.setProcessAsList(false);
-			tester.feedTranslatorDatabase();
-			tester.setProcessAsList(true);
-			tester.setReCreate(false);
-			//
-			int i = 0;
-			for (Language l : Language.usableValues()) {
-				if (i == 3) {
-					break;
-				}
-				i++;
-				//
-				T_Log.log(Translator.translate(l, TestContent.Hello));
-				T_Log.log(Translator.translate(l, TestContent.Hello.toString()));
-				//
-				T_Log.log(
-						Translator.translate(l, Arrays.asList(new Translatable[] { TestContent.Hello, TestContent.Hello }))
-								.toString());
-				T_Log.log(
-						Translator
-								.translate(
-										l,
-										Arrays.asList(
-												new String[] { TestContent.Hello.toString(), TestContent.Hello.toString() }))
-								.toString());
-				//
-				T_Log.log(Translator.translate_OnlyUseModel(l, TestContent.Hello));
-				T_Log.log(Translator.translate_OnlyUseModel(l, TestContent.Hello.toString()));
-				//
-				T_Log.log(
-						Translator
-								.translate_OnlyUseModel(
-										l,
-										Arrays.asList(new Translatable[] { TestContent.Hello, TestContent.Hello }))
-								.toString());
-				T_Log.log(
-						Translator
-								.translate_OnlyUseModel(
-										l,
-										Arrays.asList(
-												new String[] { TestContent.Hello.toString(), TestContent.Hello.toString() }))
-								.toString());
-				//
-				Map<Object, String> t = null;
-				//
-				tester.setProcessAsList(false);
-				t = tester.translate(l);
-				T_Log.log(t.toString());
-				tester.setProcessAsList(true);
-				t = tester.translate(l);
-				T_Log.log(t.toString());
-				tester.setProcessAsList(false);
-				t = tester.translate_ModelOnly(l);
-				T_Log.log(t.toString());
-				tester.setProcessAsList(true);
-				t = tester.translate_ModelOnly(l);
-				T_Log.log(t.toString());
-				tester.setProcessAsList(false);
-				t = tester.translateAndFeedTranslatorDatabase(l);
-				T_Log.log(t.toString());
-				tester.setProcessAsList(true);
-				t = tester.translateAndFeedTranslatorDatabase(l);
-				T_Log.log(t.toString());
-				//
-				//
-				tester.setReCreate(true);
-				//
-				tester.setProcessAsList(false);
-				t = tester.translate(l);
-				T_Log.log(t.toString());
-				tester.setProcessAsList(true);
-				t = tester.translate(l);
-				T_Log.log(t.toString());
-				tester.setProcessAsList(false);
-				t = tester.translate_ModelOnly(l);
-				T_Log.log(t.toString());
-				tester.setProcessAsList(true);
-				t = tester.translate_ModelOnly(l);
-				T_Log.log(t.toString());
-				tester.setProcessAsList(false);
-				t = tester.translateAndFeedTranslatorDatabase(l);
-				T_Log.log(t.toString());
-				tester.setProcessAsList(true);
-				t = tester.translateAndFeedTranslatorDatabase(l);
-				T_Log.log(t.toString());
-				//
-				tester.setReCreate(false);
+	
+		/**
+		 * Determines the time of day based on current system time in the specified
+		 * language's zone.
+		 *
+		 * @param language The language whose time zone will be used.
+		 * @return An integer representing the time of day: 0 for morning, 1 for
+		 *         afternoon, 2 for evening.
+		 */
+		public static int determinTimeOfDay(final Locale language, ZoneId zoneId) {
+			final ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId); 
+			final LocalTime now = zonedDateTime.toLocalTime();
+			if (now.isBefore(LocalTime.NOON)) {
+				return 0;
 			}
-			T_Log.log("Test Complete"); //$NON-NLS-1$
-		} catch (Exception e) {
-			T_Log.log("Test Failed", e); //$NON-NLS-1$
-			return false;
+			if (now.isBefore(LocalTime.of(18, 0))) {
+				return 1;
+			}
+			return 2;
 		}
-		return true;
-	}
+
+
 }

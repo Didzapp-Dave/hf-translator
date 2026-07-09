@@ -1,10 +1,6 @@
 package didzapp.HF_Translator;
 
-import java.util.Arrays;
-
 import com.fasterxml.jackson.annotation.JsonValue;
-
-import didzapp.HF_Translator.Translator.Language;
 
 /**
  * This class defines content-related constants and an interface for objects
@@ -84,17 +80,6 @@ public class TranslatorContent {
 		}
 
 		/**
-		 * Translates the folder's name into the specified language.
-		 *
-		 * @param language The enum constant representing the target language for
-		 *                 translation (e.g., Language.ENGLISH, Language.FRENCH)
-		 * @return Translated string representation of the folder name.
-		 */
-		public String translate(final Language language) {
-			return Translator.translate(Translator.defaultLanguage, language, this.value, Translator.redoTranslationsInTable);
-		}
-
-		/**
 		 * Gets the full path to the folder, creating it if necessary.
 		 *
 		 * @return The absolute path string for the folder.
@@ -125,26 +110,6 @@ public class TranslatorContent {
 				}
 			}
 			return null;
-		}
-
-		/**
-		 * Returns an array of all folder names as strings.
-		 *
-		 * @return Array of original string representations.
-		 */
-		public static String[] stringValues() {
-			return Arrays.stream(Language.values()).map(Language::toString).toArray(String[]::new);
-		}
-
-		/**
-		 * Returns an array of translated folder names in the specified language.
-		 *
-		 * @param language The enum constant representing the target language for
-		 *                 translation (e.g., Language.ENGLISH, Language.FRENCH)
-		 * @return Array of Translated string representations of the folder names.
-		 */
-		public static String[] stringTranslatedValues(final Language language) {
-			return Arrays.stream(FolderName.values()).map(f -> f.translate(language)).toArray(String[]::new);
 		}
 	}
 
@@ -190,37 +155,6 @@ public class TranslatorContent {
 		@Override
 		public String toString() {
 			return this.value;
-		}
-
-		/**
-		 * Translates the word or phrase into the specified language.
-		 *
-		 * @param language The enum constant representing the target language for
-		 *                 translation (e.g., Language.ENGLISH, Language.FRENCH)
-		 * @return Translated string representation of the word or phrase.
-		 */
-		public String translate(final Language language) {
-			return Translator.translate(language, this.value);
-		}
-
-		/**
-		 * Returns an array of all words or phrases as strings.
-		 *
-		 * @return Array of original string representations.
-		 */
-		public static String[] stringValues() {
-			return Arrays.stream(TestContent.values()).map(TestContent::toString).toArray(String[]::new);
-		}
-
-		/**
-		 * Returns an array of translated words or phrases in the specified language.
-		 *
-		 * @param language The enum constant representing the target language for
-		 *                 translation (e.g., Language.ENGLISH, Language.FRENCH)
-		 * @return Array of Translated string representations of the words or phrases.
-		 */
-		public static String[] stringTranslatedValues(final Language language) {
-			return Arrays.stream(TestContent.values()).map(f -> f.translate(language)).toArray(String[]::new);
 		}
 	}
 }

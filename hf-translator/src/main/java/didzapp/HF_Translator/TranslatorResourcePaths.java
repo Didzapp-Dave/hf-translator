@@ -4,9 +4,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import didzapp.T_Log;
-import didzapp.HF_Translator.Translator.Language;
 
 /**
  * A utility class that defines paths to various types of resource files used in
@@ -129,8 +129,8 @@ public class TranslatorResourcePaths {
 		 *                 translation (e.g., Language.ENGLISH, Language.FRENCH)
 		 * @return The full path to the language JS file (e.g., "flatpickr/en.js")
 		 */
-		public static final String languageRecources(Language langauge) {
-			return "/flatpickr/" + langauge.getLocale().getLanguage() + ".js"; //$NON-NLS-1$ //$NON-NLS-2$
+		public static final String languageRecources(Locale locale) {
+			return "/flatpickr/" + locale.getLanguage() + ".js"; //$NON-NLS-1$ //$NON-NLS-2$
 		}
 
 		public static final String flatpickrPath = "/flatpickr"; //$NON-NLS-1$
