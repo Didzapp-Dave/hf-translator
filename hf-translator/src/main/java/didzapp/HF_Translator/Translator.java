@@ -129,10 +129,7 @@ public class Translator {
 	 * @return all languages if universal translations is enabled, otherwise all
 	 *         languages except the disabled ones.
 	 */
-	public static Locale[] getWorkingLanguages() {
-		if (universalTranslations) {
-			return Locale.getAvailableLocales();
-		}
+	public static Locale[] getSelectedAndWorkingLanguages() {
 		return selectedLanguages.stream().filter(locale -> !disabledLanguages.contains(locale)).toArray(Locale[]::new);
 	}
 
@@ -142,10 +139,7 @@ public class Translator {
 	 * @return all languages if universal translations is enabled, otherwise all
 	 *         languages except the disabled ones.
 	 */
-	public static String[] getWorkingLanguagesAsTags() {
-		if (universalTranslations) {
-			return Arrays.stream(Locale.getAvailableLocales()).map(Locale::toLanguageTag).toArray(String[]::new);
-		}
+	public static String[] getSelectedAndWorkingLanguagesAsTags() {
 		return selectedLanguages.stream()
 				.filter(locale -> !disabledLanguages.contains(locale))
 				.map(Locale::toLanguageTag)
@@ -158,12 +152,7 @@ public class Translator {
 	 * @return all languages if universal translations is enabled, otherwise all
 	 *         languages except the disabled ones.
 	 */
-	public static String[] getWorkingLanguageNames(Locale displayLocale) {
-		if (universalTranslations) {
-			return Arrays.stream(Locale.getAvailableLocales())
-					.map(locale -> locale.getDisplayName(displayLocale))
-					.toArray(String[]::new);
-		}
+	public static String[] getSelectedAndWorkingLanguageNames(Locale displayLocale) {
 		return selectedLanguages.stream()
 				.filter(locale -> !disabledLanguages.contains(locale))
 				.map(locale -> locale.getDisplayName(displayLocale))
@@ -523,7 +512,7 @@ public class Translator {
 						}
 					}
 				}
-				for (Locale l : Locale.getAvailableLocales()) {
+				for (Locale l : getSelectedAndWorkingLanguages()) {
 					translateStacker.add(l.getDisplayLanguage(Locale.forLanguageTag(defaultLanguage.toLanguageTag())));
 				}
 				translateStacker.feedTranslatorDatabase();
@@ -1737,7 +1726,7 @@ public class Translator {
 			new Thread(
 					() -> {
 						T_Log.log("Feeding Translator In New Thread"); //$NON-NLS-1$
-						for (final Locale l : languageInUseFirst(getWorkingLanguages(), to)) {
+						for (final Locale l : languageInUseFirst(getSelectedAndWorkingLanguages(), to)) {
 							if ((!l.equals(getDefaultSystemLanguage()) && (!l.equals(to)))) {
 								Translator.translate(
 										from != null ? from : defaultLanguage,
@@ -1757,7 +1746,7 @@ public class Translator {
 		 *
 		 */
 		public void feedTranslatorDatabase() {
-			for (final Locale l : getWorkingLanguages()) {
+			for (final Locale l : getSelectedAndWorkingLanguages()) {
 				if (!l.equals(getDefaultSystemLanguage())) {
 					Translator.translate(
 							defaultLanguage,
