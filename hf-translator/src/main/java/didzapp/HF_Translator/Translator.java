@@ -926,7 +926,7 @@ public class Translator {
 				T_Log.log("Top Language Code: " + topLangCode); //$NON-NLS-1$
 				@SuppressWarnings("unused")
 				double topConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				Locale detected = Locale.forLanguageTag(ULocale.forLanguageTag(topLangCode).getLanguage());
+				Locale detected = Locale.forLanguageTag(ULocale.forLanguageTag(topLangCode.substring(0, 3)).getLanguage());
 				if (detected == null) {
 					return null;
 				}
@@ -1020,7 +1020,7 @@ public class Translator {
 				T_Log.log("Top Language Code: " + topLangCode); //$NON-NLS-1$
 				@SuppressWarnings("unused")
 				double topConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				Locale detected = Locale.forLanguageTag(ULocale.forLanguageTag(topLangCode).getLanguage());
+				Locale detected = Locale.forLanguageTag(ULocale.forLanguageTag(topLangCode.substring(0, 3)).getLanguage());
 				if (detected == null) {
 					return null;
 				}
