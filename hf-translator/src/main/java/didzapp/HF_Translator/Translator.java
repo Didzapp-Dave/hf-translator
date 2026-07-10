@@ -926,7 +926,7 @@ public class Translator {
 				T_Log.log("Top Language Code: " + topLangCode); //$NON-NLS-1$
 				@SuppressWarnings("unused")
 				double topConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				Locale detected = Locale.forLanguageTag(toTwoLetteLanguagerCode(topLangCode));
+				Locale detected = Locale.forLanguageTag(ULocale.forLanguageTag(topLangCode).getLanguage());
 				if (detected == null) {
 					return null;
 				}
@@ -1020,7 +1020,7 @@ public class Translator {
 				T_Log.log("Top Language Code: " + topLangCode); //$NON-NLS-1$
 				@SuppressWarnings("unused")
 				double topConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				Locale detected = Locale.forLanguageTag(toTwoLetteLanguagerCode(topLangCode));
+				Locale detected = Locale.forLanguageTag(ULocale.forLanguageTag(topLangCode).getLanguage());
 				if (detected == null) {
 					return null;
 				}
@@ -1038,12 +1038,11 @@ public class Translator {
 		}
 	}
 
-	private static String toTwoLetteLanguagerCode(String conlidCode) {
-		String iso639_3 = conlidCode.substring(0, 3);
-		ULocale locale = ULocale.forLanguageTag(iso639_3);
-		return locale.getLanguage(); // "eng" >> "en" etc... if mapping exists
-	}
-
+	/**
+	 * Closes all resources relating to the language detector model.
+	 *
+	 * 
+	 */
 	private static void closeLanguageDetectorService() {
 		synchronized (processLock) {
 			try {
