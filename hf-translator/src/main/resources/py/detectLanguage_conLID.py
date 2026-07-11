@@ -3,6 +3,15 @@ import os
 import sys
 import json
 import subprocess
+import importlib.util
+
+# 1. Try to import iso639. If it fails (or if Lang is missing), force the correct install.
+try:
+    from iso639 import Lang
+except (ImportError, AttributeError):
+    print("Installing correct iso639-lang package...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "iso639-lang"])
+    from iso639 import Lang
 
 # ---------- Dependency check & auto‑install ----------
 try:
@@ -42,31 +51,50 @@ def predict(text, model):
 
 
 def main():
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         sys.exit(1)
 
     # Server mode?
     if sys.argv[1] == "true":
         model = load_model()
         sys.stderr.write("🚀 Server mode active. Reading text lines from stdin...\n")
-        for line in sys.stdin:
-            text = line.strip()
+        for line in sys.stdin.buffer:
+            text = line.decode('utf-8').strip()
             if not text:
-                continue  # skip empty lines
+                continue  
+            
             result = predict(text, model)
-            print(json.dumps(result))
+            lang = Lang(result[0]['language'].split('_')[0])
+            code = lang.pt1
+            if not code:
+                macro = lang.macro()          # string, e.g., "zho"
+                if macro:
+                    code = Lang(macro).pt1  # convert macro to 2-letter code
+            if not code:
+                code = lang.pt3             # fallback to 3-letter code (or use the raw code)
+            print(code)   # always a string
             sys.stdout.flush()
         return
 
     # Non-server mode: use command-line text
-    text = sys.argv[2].strip()
+    text = sys.stdin.buffer.readline().decode('utf-8').strip()
     if not text:
         text = "Testing testing, is this thing working ?"
         sys.stderr.write("⚠️ No input text provided, using default.\n")
 
     model = load_model()
     result = predict(text, model)
-    print(json.dumps(result))
+    lang = Lang(result[0]['language'].split('_')[0])
+    code = lang.pt1
+    if not code:
+        macro = lang.macro()          # string, e.g., "zho"
+        if macro:
+            code = Lang(macro).pt1  # convert macro to 2-letter code
+    if not code:
+        code = lang.pt3             # fallback to 3-letter code (or use the raw code)
+    print(code)   # always a string
+    sys.stdout.flush()
+    return
 
 
 if __name__ == "__main__":

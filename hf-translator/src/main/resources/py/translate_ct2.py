@@ -1,9 +1,24 @@
 import base64
 import sys
 import json
-import ctranslate2
-from transformers import MarianTokenizer
-from transformers import logging as hf_logging
+
+# ---------- Install & import ctranslate2 ----------
+try:
+    import ctranslate2
+except ImportError:
+    print("Installing ctranslate2...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "ctranslate2"])
+    import ctranslate2
+
+# ---------- Install & import transformers ----------
+try:
+    from transformers import MarianTokenizer
+    from transformers import logging as hf_logging
+except ImportError:
+    print("Installing transformers...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "transformers"])
+    from transformers import MarianTokenizer
+    from transformers import logging as hf_logging
 
 # Suppress transformers warnings/progress bars
 hf_logging.set_verbosity_error()

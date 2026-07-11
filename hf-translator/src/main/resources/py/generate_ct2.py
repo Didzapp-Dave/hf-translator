@@ -1,6 +1,13 @@
 import sys
-import ctranslate2
-from ctranslate2.converters import TransformersConverter
+
+try:
+    import ctranslate2
+    from ctranslate2.converters import TransformersConverter
+except ImportError:
+    print("Installing ctranslate2...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "ctranslate2"])
+    import ctranslate2
+    from ctranslate2.converters import TransformersConverter
 
 if len(sys.argv) < 5:
     print("Usage: python generate_ct2.py <model_dir> <langIN> <langOUT> <out_dir>")

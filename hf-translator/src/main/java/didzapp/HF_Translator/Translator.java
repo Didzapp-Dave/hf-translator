@@ -60,9 +60,7 @@ import java.util.jar.JarFile;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ibm.icu.util.ULocale;
 
 import didzapp.T_Log;
 import didzapp.HF_Translator.TranslatorContent.FolderName;
@@ -121,7 +119,7 @@ public class Translator {
 	// Selected languages
 	static List<Locale> selectedLanguages = new ArrayList<>();
 	// Languages Links
-	static Map<Locale, List<Locale>> languagesLinks = new HashMap<>();
+	static Map<String, List<String>> languagesLinks = new HashMap<>();
 
 	/**
 	 * Gets the working languages as locales.
@@ -156,6 +154,19 @@ public class Translator {
 		return selectedLanguages.stream()
 				.filter(locale -> !disabledLanguages.contains(locale))
 				.map(locale -> locale.getDisplayName(displayLocale))
+				.toArray(String[]::new);
+	}
+
+	/**
+	 * Gets the working language names as strings.
+	 *
+	 * @return all languages if universal translations is enabled, otherwise all
+	 *         languages except the disabled ones.
+	 */
+	public static String[] getSelectedAndWorkingLanguageTranslatedNames() {
+		return selectedLanguages.stream()
+				.filter(locale -> !disabledLanguages.contains(locale))
+				.map(locale -> locale.getDisplayName(locale))
 				.toArray(String[]::new);
 	}
 
@@ -454,7 +465,7 @@ public class Translator {
 				defaultLanguage = runLanguageDetectorOneTime("Testing, testing, is this thing working?"); //$NON-NLS-1$
 			}
 			if (defaultLanguage == null || !defaultLanguage.getLanguage().equals("en")) { //$NON-NLS-1$
-				T_Log.log("Language Detection Not Working: locale: " + defaultLanguage.toLanguageTag()); //$NON-NLS-1$
+				T_Log.log("Language Detection Not Working: locale: " + defaultLanguage.getLanguage()); //$NON-NLS-1$
 				return false;
 			}
 			T_Log.log("Language Detection Working"); //$NON-NLS-1$
@@ -513,7 +524,7 @@ public class Translator {
 					}
 				}
 				for (Locale l : getSelectedAndWorkingLanguages()) {
-					translateStacker.add(l.getDisplayLanguage(Locale.forLanguageTag(defaultLanguage.toLanguageTag())));
+					translateStacker.add(l.getDisplayLanguage(defaultLanguage));
 				}
 				translateStacker.feedTranslatorDatabase();
 			}
@@ -700,66 +711,73 @@ public class Translator {
 				String finalInput = input;
 				Locale finalLangIN = langIN;
 				if (!modelDir.toFile().exists()) {
+					T_Log.log(
+							"No Model File Found, Searching For Languages That Translate To " + langOUT //$NON-NLS-1$
+									.getDisplayName(defaultLanguage));
 					BridgeContainer bridge = bridgeLanguages(langIN, langOUT, input);
 					if (bridge != null) {
 						finalInput = bridge.input;
 						finalLangIN = bridge.locale;
+						modelDir = getModelDir(true, finalLangIN, langOUT);
 					} else {
 						finalInput = null;
 						finalLangIN = null;
+						modelDir = null;
 					}
 				}
-				if (finalLangIN != null && finalInput != null && !finalInput.isBlank()) {
-					final ProcessBuilder pb = new ProcessBuilder(
-							ToPyFiles.pythonLang,
-							scriptFileTranslate.getAbsolutePath(),
-							modelDir.toAbsolutePath().toString(),
-							finalLangIN.getLanguage(),
-							langOUT.getLanguage(),
-							finalInput);
-					pb.redirectErrorStream(false);
-					final Process p = pb.start();
-					final StringBuilder output = new StringBuilder();
-					Thread stdoutThread = new Thread(
-							() -> {
-								try (BufferedReader reader = new BufferedReader(
-										new InputStreamReader(
-												p.getInputStream(),
-												StandardCharsets.UTF_8))) {
-									String line;
-									while ((line = reader.readLine()) != null) {
-										output.append(line);
-									}
-								} catch (IOException e) {
-									T_Log.log("CTranslate2 Translation Failed At STDOUT THREAD: ", e); //$NON-NLS-1$
-								}
-							});
-					Thread stderrThread = new Thread(
-							() -> {
-								try (BufferedReader errReader = new BufferedReader(
-										new InputStreamReader(
-												p.getErrorStream(),
-												StandardCharsets.UTF_8))) {
-									String line;
-									while ((line = errReader.readLine()) != null) {
-										T_Log.log(line);
-									}
-								} catch (IOException e) {
-									T_Log.log("CTranslate2 Translation Failed At STDERR THREAD: ", e); //$NON-NLS-1$
-								}
-							});
-					stdoutThread.start();
-					stderrThread.start();
-					stdoutThread.join();
-					stderrThread.join();
-					final int exit = p.waitFor();
-					if (exit != 0) {
-						T_Log.log("CTranslate2 Translation Failed, Exit Code: " + exit); //$NON-NLS-1$
-						return Collections.emptyList();
-					}
-					return new ObjectMapper().readValue(output.toString(), new TypeReference<List<String>>() {
-						/* null */});
+				if (modelDir == null || finalLangIN == null || finalInput == null || finalInput.isBlank()) {
+					T_Log.log("No Translation Found For: " + langOUT.getDisplayName(defaultLanguage)); //$NON-NLS-1$
+					return Collections.emptyList();
 				}
+				final ProcessBuilder pb = new ProcessBuilder(
+						ToPyFiles.pythonLang,
+						scriptFileTranslate.getAbsolutePath(),
+						modelDir.toAbsolutePath().toString(),
+						finalLangIN.getLanguage(),
+						langOUT.getLanguage(),
+						finalInput);
+				pb.redirectErrorStream(false);
+				final Process p = pb.start();
+				final StringBuilder output = new StringBuilder();
+				Thread stdoutThread = new Thread(
+						() -> {
+							try (BufferedReader reader = new BufferedReader(
+									new InputStreamReader(
+											p.getInputStream(),
+											StandardCharsets.UTF_8))) {
+								String line;
+								while ((line = reader.readLine()) != null) {
+									output.append(line);
+								}
+							} catch (IOException e) {
+								T_Log.log("CTranslate2 Translation Failed At STDOUT THREAD: ", e); //$NON-NLS-1$
+							}
+						});
+				Thread stderrThread = new Thread(
+						() -> {
+							try (BufferedReader errReader = new BufferedReader(
+									new InputStreamReader(
+											p.getErrorStream(),
+											StandardCharsets.UTF_8))) {
+								String line;
+								while ((line = errReader.readLine()) != null) {
+									T_Log.log(line);
+								}
+							} catch (IOException e) {
+								T_Log.log("CTranslate2 Translation Failed At STDERR THREAD: ", e); //$NON-NLS-1$
+							}
+						});
+				stdoutThread.start();
+				stderrThread.start();
+				stdoutThread.join();
+				stderrThread.join();
+				final int exit = p.waitFor();
+				if (exit != 0) {
+					T_Log.log("CTranslate2 Translation Failed, Exit Code: " + exit); //$NON-NLS-1$
+					return Collections.emptyList();
+				}
+				return new ObjectMapper().readValue(output.toString(), new TypeReference<List<String>>() {
+					/* null */});
 			}
 			return Collections.emptyList();
 		} catch (final Exception e) {
@@ -796,47 +814,81 @@ public class Translator {
 	 *         null if no bridge can be made
 	 */
 	private static BridgeContainer bridgeLanguages(Locale langIN, Locale langOUT, String input) throws Exception {
-		if (languagesLinks.get(langIN) != null) {
-			for (Locale langBridge : languagesLinks.get(langIN)) {
-				if (languagesLinks.get(langBridge) != null && languagesLinks.get(langBridge).contains(langOUT)) {
-					Path modelDir = getModelDir(true, langIN, langBridge);
-					if (modelDir.toFile().exists()) {
-						if (input != null && !input.isBlank()) {
-							final ProcessBuilder pb = new ProcessBuilder(
-									ToPyFiles.pythonLang,
-									scriptFileTranslate.getAbsolutePath(),
-									modelDir.toAbsolutePath().toString(),
-									langIN.getLanguage(),
-									langBridge.getLanguage(),
-									input);
-							pb.redirectErrorStream(false);
-							final Process p = pb.start();
-							final StringBuilder output = new StringBuilder();
-							try (BufferedReader reader = new BufferedReader(
-									new InputStreamReader(
-											p.getInputStream(),
-											StandardCharsets.UTF_8));
-									BufferedReader errReader = new BufferedReader(
+		if (languagesLinks.get(langIN.getLanguage()) != null) {
+			T_Log.log("Found Compatable Languages For: " + langIN.getDisplayName(defaultLanguage)); //$NON-NLS-1$
+			for (String langBridgeCode : languagesLinks.get(langIN.getLanguage())) {
+				T_Log.log(
+						"Checking Compatablity For: " + Locale.forLanguageTag(langBridgeCode) //$NON-NLS-1$
+								.getDisplayName(defaultLanguage) + " To " + langOUT //$NON-NLS-1$
+										.getDisplayName(defaultLanguage));
+				if (languagesLinks.get(langBridgeCode) == null
+						|| !languagesLinks.get(langBridgeCode).contains(langOUT.getLanguage())) {
+					T_Log.log(
+							Locale.forLanguageTag(langBridgeCode)
+									.getDisplayName(defaultLanguage) + " Is Not Compatable With " + langOUT //$NON-NLS-1$
+											.getDisplayName(defaultLanguage));
+					continue;
+				}
+				T_Log.log(
+						Locale.forLanguageTag(langBridgeCode).getDisplayName(defaultLanguage) + " Is Compatable With " + langOUT //$NON-NLS-1$
+								.getDisplayName(defaultLanguage));
+				Path modelDir = getModelDir(true, langIN, Locale.forLanguageTag(langBridgeCode));
+				if (modelDir.toFile().exists()) {
+					if (input != null && !input.isBlank()) {
+						final ProcessBuilder pb = new ProcessBuilder(
+								ToPyFiles.pythonLang,
+								scriptFileTranslate.getAbsolutePath(),
+								modelDir.toAbsolutePath().toString(),
+								langIN.getLanguage(),
+								langBridgeCode,
+								input);
+						pb.redirectErrorStream(false);
+						final Process p = pb.start();
+						final StringBuilder output = new StringBuilder();
+						Thread stdoutThread = new Thread(
+								() -> {
+									try (BufferedReader reader = new BufferedReader(
+											new InputStreamReader(
+													p.getInputStream(),
+													StandardCharsets.UTF_8))) {
+										String line;
+										while ((line = reader.readLine()) != null) {
+											output.append(line);
+										}
+									} catch (IOException e) {
+										T_Log.log("CTranslate2 Translation Bridge Failed At STDOUT THREAD: ", e); //$NON-NLS-1$
+									}
+								});
+						Thread stderrThread = new Thread(
+								() -> {
+									try (BufferedReader errReader = new BufferedReader(
 											new InputStreamReader(
 													p.getErrorStream(),
-													StandardCharsets.UTF_8));) {
-								String line;
-								while ((line = reader.readLine()) != null) {
-									output.append(line);
-								}
-								while ((line = errReader.readLine()) != null) {
-									T_Log.log(line);
-								}
-							}
-							final int exit = p.waitFor();
-							if (exit != 0) {
-								T_Log.log("CTranslate2 Translation Failed, Exit Code: " + exit); //$NON-NLS-1$
-								return null;
-							}
-							return new BridgeContainer(
-									langBridge,
-									output.toString());
+													StandardCharsets.UTF_8))) {
+										String line;
+										while ((line = errReader.readLine()) != null) {
+											T_Log.log(line);
+										}
+									} catch (IOException e) {
+										T_Log.log("CTranslate2 Translation Bridge Failed At STDERR THREAD: ", e); //$NON-NLS-1$
+									}
+								});
+						stdoutThread.start();
+						stderrThread.start();
+						stdoutThread.join();
+						stderrThread.join();
+						final int exit = p.waitFor();
+						if (exit != 0) {
+							T_Log.log("CTranslate2 Translation Bridge Failed, Exit Code: " + exit); //$NON-NLS-1$
+							return null;
 						}
+						final String jsonInput = new ObjectMapper().writeValueAsString(
+								new ObjectMapper().readValue(output.toString(), new TypeReference<List<String>>() {
+									/* null */}));
+						final String encoded = Base64.getEncoder().encodeToString(jsonInput.getBytes(StandardCharsets.UTF_8));
+						return new BridgeContainer(
+								Locale.forLanguageTag(langBridgeCode),
+								encoded);
 					}
 				}
 			}
@@ -868,11 +920,14 @@ public class Translator {
 				final ProcessBuilder pb = new ProcessBuilder(
 						ToPyFiles.pythonLang,
 						scriptFileDetectLanguage.getAbsolutePath(),
-						"false", //$NON-NLS-1$
-						input);
+						"false"); //$NON-NLS-1$
 				pb.redirectErrorStream(false);
 				final Process p = pb.start();
 				final StringBuilder output = new StringBuilder();
+				persistentWriter = new BufferedWriter(
+						new OutputStreamWriter(
+								p.getOutputStream(),
+								StandardCharsets.UTF_8));
 				Thread stdoutThread = new Thread(
 						() -> {
 							try (BufferedReader reader = new BufferedReader(
@@ -901,21 +956,33 @@ public class Translator {
 								T_Log.log("LanguageDetector Failed At STDERR THREAD: ", e); //$NON-NLS-1$
 							}
 						});
+				Thread stdinThread = new Thread(
+						() -> {
+							try (BufferedWriter writer = new BufferedWriter(
+									new OutputStreamWriter(
+											p.getOutputStream(),
+											StandardCharsets.UTF_8))) {
+								writer.write(input);
+								writer.newLine();
+								writer.flush();
+							} catch (IOException e) {
+								T_Log.log("LanguageDetector Failed At STDOUT THREAD: ", e); //$NON-NLS-1$
+							}
+						});
 				stdoutThread.start();
 				stderrThread.start();
+				stdinThread.start();
 				stdoutThread.join();
 				stderrThread.join();
+				stdinThread.join();
 				final int exit = p.waitFor();
 				if (exit != 0) {
 					T_Log.log("Language Detector Failed, Exit Code: " + exit); //$NON-NLS-1$
 					return defaultLanguage;
 				}
-				JsonNode arr = new ObjectMapper().readTree(output.toString());
-				String topLangCode = arr.get(0).get("language").asText(); //$NON-NLS-1$
+				String topLangCode = output.toString().trim();
 				T_Log.log("Top Language Code: " + topLangCode); //$NON-NLS-1$
-				@SuppressWarnings("unused")
-				double topConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				Locale detected = Locale.forLanguageTag(ULocale.forLanguageTag(topLangCode.substring(0, 3)).getLanguage());
+				Locale detected = Locale.forLanguageTag(topLangCode);
 				if (detected == null) {
 					return null;
 				}
@@ -960,8 +1027,7 @@ public class Translator {
 						ProcessBuilder pb = new ProcessBuilder(
 								ToPyFiles.pythonLang,
 								scriptFileDetectLanguage.getAbsolutePath(),
-								"true", //$NON-NLS-1$
-								input);
+								"true"); //$NON-NLS-1$
 						pb.redirectErrorStream(false);
 						persistentProcess = pb.start();
 						persistentWriter = new BufferedWriter(
@@ -1001,15 +1067,12 @@ public class Translator {
 				persistentWriter.flush();
 				String jsonLine = persistentReader.readLine();
 				if (jsonLine == null) {
-					persistentProcess.destroyForcibly();
+					closeLanguageDetectorService();
 					return detectLanguage(input);
 				}
-				JsonNode arr = new ObjectMapper().readTree(jsonLine);
-				String topLangCode = arr.get(0).get("language").asText(); //$NON-NLS-1$
+				String topLangCode = jsonLine.trim();
 				T_Log.log("Top Language Code: " + topLangCode); //$NON-NLS-1$
-				@SuppressWarnings("unused")
-				double topConf = arr.get(0).get("confidence").asDouble(); //$NON-NLS-1$
-				Locale detected = Locale.forLanguageTag(ULocale.forLanguageTag(topLangCode.substring(0, 3)).getLanguage());
+				Locale detected = Locale.forLanguageTag(topLangCode);
 				if (detected == null) {
 					return null;
 				}
@@ -1274,21 +1337,25 @@ public class Translator {
 			if ((!lang.equals(lang2)) && (!lang.getLanguage().equals(lang2.getLanguage()))) {
 				try (HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()) {
 					Path modelDir = getModelDir(false, lang, lang2);
+					Path outDir = modelDir.resolve(ToPyFiles.generatedModelFolder);
+					Path modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
 					try {
 						Files.createDirectories(modelDir);
 						T_Log.log("Downloading Model: " + lang + "-" + lang2); //$NON-NLS-1$ //$NON-NLS-2$
 						downloadModelFiles(client, modelDir, lang, lang2);
 						defaultToCleintSuccess = true;
-						if (languagesLinks.get(lang) == null) {
-							languagesLinks.put(lang, new ArrayList<>());
+						if (languagesLinks.get(lang.getLanguage()) == null) {
+							languagesLinks.put(lang.getLanguage(), new ArrayList<>());
 						}
-						languagesLinks.get(lang).add(lang2);
+						if (Files.exists(modelBin)) {
+							List<String> newList = languagesLinks.get(lang.getLanguage());
+							newList.add(lang2.getLanguage());
+							languagesLinks.put(lang.getLanguage(), newList);
+						}
 					} catch (final Exception e) {
 						if (!universalTranslations) {
 							disabledLanguages.add(lang2);
 						}
-						final Path outDir = modelDir.resolve(ToPyFiles.generatedModelFolder);
-						final Path modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
 						if (!Files.exists(modelBin)) {
 							T_Log.log(
 									"Download Failed For " + lang + "-" + lang2 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
@@ -1309,13 +1376,19 @@ public class Translator {
 					if (defaultToCleintSuccess) {
 						try {
 							modelDir = getModelDir(false, lang2, lang);
+							outDir = modelDir.resolve(ToPyFiles.generatedModelFolder);
+							modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
 							Files.createDirectories(modelDir);
 							T_Log.log("Downloading Model: " + lang2 + "-" + lang); //$NON-NLS-1$ //$NON-NLS-2$
 							downloadModelFiles(client, modelDir, lang2, lang);
-							if (languagesLinks.get(lang2) == null) {
-								languagesLinks.put(lang2, new ArrayList<>());
+							if (languagesLinks.get(lang2.getLanguage()) == null) {
+								languagesLinks.put(lang2.getLanguage(), new ArrayList<>());
 							}
-							languagesLinks.get(lang2).add(lang);
+							if (Files.exists(modelBin)) {
+								List<String> newList = languagesLinks.get(lang2.getLanguage());
+								newList.add(lang.getLanguage());
+								languagesLinks.put(lang2.getLanguage(), newList);
+							}
 							if (firstCall && universalTranslations) {
 								downloadFilesAndCreateModels(lang2, false);
 							}
@@ -1323,8 +1396,6 @@ public class Translator {
 							if (!universalTranslations) {
 								disabledLanguages.add(lang2);
 							}
-							final Path outDir = modelDir.resolve(ToPyFiles.generatedModelFolder);
-							final Path modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
 							if (!Files.exists(modelBin)) {
 								T_Log.log(
 										"Download Failed For " + lang2 + "-" + lang + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
