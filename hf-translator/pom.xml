@@ -44,7 +44,7 @@
 			<artifactId>slf4j-api</artifactId>
 			<version>2.0.16</version>
 		</dependency>
-		
+
 		<!-- Logging IMPLEMENTATION - for Java 23 -->
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
@@ -65,12 +65,59 @@
 			<optional>true</optional>
 			<!-- WARNING: This drops Java 8/11 parent support entirely. -->
 		</dependency>
-		
-		<!-- MariaDB JDBC Driver - for Java 23 TLS/security patches -->
+
+		<dependency>
+			<groupId>org.mybatis</groupId>
+			<artifactId>mybatis</artifactId>
+			<version>3.5.19</version>
+			<scope>provided</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mongodb</groupId>
+			<artifactId>mongodb-driver-sync</artifactId>
+			<version>5.8.0</version>
+			<scope>provided</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mongodb</groupId>
+			<artifactId>mongodb-driver-sync</artifactId>
+			<version>5.6.0</version>
+			<scope>provided</scope>
+			<optional>true</optional>
+		</dependency>
+
 		<dependency>
 			<groupId>org.mariadb.jdbc</groupId>
 			<artifactId>mariadb-java-client</artifactId>
-			<version>3.5.1</version>
+			<version>3.5.6</version>
+			<scope>provided</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>com.mysql</groupId>
+			<artifactId>mysql-connector-j</artifactId>
+			<version>9.4.0</version>
+			<scope>provided</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.7.7</version>
+			<scope>provided</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<version>2.3.232</version>
 			<scope>provided</scope>
 			<optional>true</optional>
 		</dependency>

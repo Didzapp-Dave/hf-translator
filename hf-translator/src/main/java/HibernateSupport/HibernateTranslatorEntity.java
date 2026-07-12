@@ -33,6 +33,7 @@ import didzapp.HF_Translator.TranslatorResourcePaths.ToConfigFiles;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.persistence.Version;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -52,6 +53,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	private static final String Column_modleCode = "ModelCode"; //$NON-NLS-1$
 	private static final String Column_StringOut = "StringOUT"; //$NON-NLS-1$
 	private static final String Column_LastUsed = "LastUsed"; //$NON-NLS-1$
+	// Entity Columns
 	// Primary key field
 	@Id
 	@Column(name = Column_id, nullable = false, length = 50, columnDefinition = "VARCHAR(50) NOT NULL COLLATE utf8mb4_bin")
@@ -81,15 +83,24 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	}
 
 	/**
-	 * Initiator for Hibernate Implementation.
+	 * Constructor with all fields.
 	 */
-	@Override
-	public void init(String libhibernate_cfg_path) {
-		HibernateUtil.initSessionFactory(libhibernate_cfg_path);
+	public HibernateTranslatorEntity(String stringIn, String modelCode, String stringOut) {
+		this.StringIN = stringIn;
+		this.ModelCode = modelCode;
+		this.StringOUT = stringOut;
 	}
 
 	/**
 	 * Initiator for Hibernate Implementation.
+	 */
+	@Override
+	public void init(String configPathOrString) {
+		HibernateUtil.initSessionFactory(configPathOrString);
+	}
+
+	/**
+	 * Initiator bypass for Hibernate Implementation.
 	 */
 	@Override
 	public void setFrameworkObject(Object object) {
@@ -102,7 +113,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	}
 
 	/**
-	 * Initiator for Hibernate Implementation.
+	 * Shutdown method for Hibernate Implementation.
 	 */
 	@Override
 	public void shutdown() {
@@ -110,7 +121,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	}
 
 	/**
-	 * Initiator for Hibernate Implementation.
+	 * Drop table method for Hibernate Implementation.
 	 */
 	@Override
 	public void dropTable() {
@@ -118,6 +129,16 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 			HibernateUtil.dropTable(hibernateSession);
 			return null;
 		}, 3);
+	}
+
+	/**
+	 * Gets the entity id if it has been saved.
+	 *
+	 * @return The entity id if it has been saved
+	 */
+	@Override
+	public String getId() {
+		return this.id;
 	}
 
 	/**
@@ -432,7 +453,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	 * Utility class for managing Hibernate sessions and transactions and ids.
 	 */
 	private static class HibernateUtil {
-		private class HibernateConfigMapper {
+		private static class HibernateConfigMapper {
 			private record DbDetails(String dialect, String driver) {
 			}
 
@@ -486,15 +507,16 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 		/**
 		 * Initializes the Hibernate session factory.
 		 *
-		 * @param libhibernate_cfg_path Path to config file
+		 * @param configPathOrString Path to config file
 		 */
-		private static synchronized void initSessionFactory(String libhibernate_cfg_path) {
+		private static synchronized void initSessionFactory(String configPathOrString) {
 			if (sessionFactory == null) {
 				try {
+					T_Log.log("Initializing Hibernate Session Factory: " + HibernateTranslatorEntity.class.getSimpleName()); //$NON-NLS-1$
 					final Configuration configuration = new Configuration();
 					// 1. Detect config file and apply to configuration
-					if (libhibernate_cfg_path != null) {
-						cfg = libhibernate_cfg_path;
+					if (configPathOrString != null) {
+						cfg = configPathOrString;
 						configuration.configure(Thread.currentThread().getContextClassLoader().getResource(cfg));
 					} else {
 						configuration.configure(cfg);
@@ -504,7 +526,6 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 					// 3. Programmatically configure Hibernate
 					configuration.setProperty("hibernate.dialect", details.dialect()); //$NON-NLS-1$
 					configuration.setProperty("hibernate.connection.driver_class", details.driver()); //$NON-NLS-1$
-					T_Log.log("Initializing Hibernate Session Factory: " + HibernateTranslatorEntity.class.getSimpleName()); //$NON-NLS-1$
 					configuration.addAnnotatedClass(HibernateTranslatorEntity.class);
 					sessionFactory = configuration.buildSessionFactory();
 					T_Log.log("Initialized successfully."); //$NON-NLS-1$
@@ -581,8 +602,10 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 		private static <T> T createSessionAndExecuteTransactionWithRetry(final Function<Session, T> action, final int maxRetries) {
 			int retryCount = 0;
 			while (retryCount <= maxRetries) {
+				Session hibernateSession = null;
 				Transaction transaction = null;
-				try (Session hibernateSession = sessionFactory.openSession()) {
+				try {
+					hibernateSession = sessionFactory.openSession();
 					transaction = hibernateSession.beginTransaction();
 					final T result = action.apply(hibernateSession);
 					transaction.commit();
@@ -590,7 +613,11 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 				} catch (final Exception e) {
 					if (!(e instanceof StaleObjectStateException) && !(e instanceof LockAcquisitionException)) {
 						if ((transaction != null) && transaction.isActive()) {
-							transaction.rollback();
+							try {
+								transaction.rollback();
+							} catch (final Exception rollbackException) {
+								T_Log.log("Rollback failed: ", rollbackException); //$NON-NLS-1$
+							}
 						}
 						if (e instanceof HibernateException) {
 							T_Log.log(
@@ -599,6 +626,16 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 						} else {
 							T_Log.log(
 									"Unexpected Error During Transaction: ", //$NON-NLS-1$
+									e);
+						}
+						if (e instanceof OptimisticLockException) {
+							retryCount++;
+							if (retryCount > maxRetries) {
+								T_Log.log("Max retries reached for optimistic locking: ", e); //$NON-NLS-1$
+								throw e;
+							}
+							T_Log.log(
+									"Optimistic locking conflict. Retrying attempt " + retryCount, //$NON-NLS-1$
 									e);
 						}
 						throw e;
@@ -631,6 +668,10 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 								ie);
 						Thread.currentThread().interrupt();
 						break;
+					}
+				} finally {
+					if (hibernateSession != null) {
+						hibernateSession.close();
 					}
 				}
 			}

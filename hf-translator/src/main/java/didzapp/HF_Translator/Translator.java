@@ -494,7 +494,7 @@ public class Translator {
 			//
 			runningMaintenance = false;
 			//
-			if (feed_content) {
+			if (feed_content && framework_object != null && database != null) {
 				final TranslateStacker translateStacker = new TranslateStacker();
 				if (contentClasses != null && contentClasses.length > 0) {
 					for (Class<?> clazz : contentClasses) {
@@ -2638,11 +2638,13 @@ public class Translator {
 
 		abstract void dropTable();
 
-		abstract HibernateTranslatorEntity setStringIN(final Object StringIN);
+		abstract String getId();
 
-		abstract HibernateTranslatorEntity setModelCode(final String ModelCode);
+		abstract TranslatorDatabaseManagement setStringIN(final Object StringIN);
 
-		abstract HibernateTranslatorEntity setTranslation(final String StringOUT);
+		abstract TranslatorDatabaseManagement setModelCode(final String ModelCode);
+
+		abstract TranslatorDatabaseManagement setTranslation(final String StringOUT);
 
 		abstract String getTranslation();
 
@@ -2650,9 +2652,9 @@ public class Translator {
 
 		abstract void delete();
 
-		abstract HibernateTranslatorEntity getTranslation(final String id);
+		abstract TranslatorDatabaseManagement getTranslation(final String id);
 
-		abstract HibernateTranslatorEntity getTranslation(final String modelCode, final Object input);
+		abstract TranslatorDatabaseManagement getTranslation(final String modelCode, final Object input);
 
 		abstract void save(final String modelCode, final Object input, final String translatedString);
 
