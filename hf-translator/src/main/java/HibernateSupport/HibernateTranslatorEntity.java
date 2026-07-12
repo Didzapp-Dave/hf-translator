@@ -1,4 +1,4 @@
-package didzapp.HF_Translator;
+package HibernateSupport;
 
 import java.security.SecureRandom;
 import java.sql.Driver;
@@ -8,7 +8,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import org.hibernate.HibernateException;
@@ -16,12 +18,16 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.StaleObjectStateException;
 import org.hibernate.Transaction;
+import org.hibernate.TypeMismatchException;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.exception.LockAcquisitionException;
 import org.hibernate.query.MutationQuery;
 import org.hibernate.query.Query;
 
 import didzapp.T_Log;
+import didzapp.HF_Translator.Translator;
+import didzapp.HF_Translator.Translator.DetectionUtils.Database;
+import didzapp.HF_Translator.Translator.TranslatorDatabaseManagement;
 import didzapp.HF_Translator.TranslatorContent.Translatable;
 import didzapp.HF_Translator.TranslatorResourcePaths.ToConfigFiles;
 import jakarta.persistence.Column;
@@ -37,8 +43,8 @@ import jakarta.persistence.criteria.Root;
  * table in the database and handles persistence using Hibernate.
  */
 @Entity
-public class TranslatorEntity {
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Hibernate Mapping
+public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
+	/// Hibernate Mapping
 	// Column names used for mapping to database columns
 	protected static final String Column_id = "id"; //$NON-NLS-1$
 	protected static final String Column_version = "version"; //$NON-NLS-1$
@@ -67,11 +73,51 @@ public class TranslatorEntity {
 	@Column(name = Column_LastUsed, nullable = false)
 	private Timestamp LastUsed;
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Instance Methods
+	/// Instance Methods
 	/**
 	 * Default constructor required by Hibernate.
 	 */
-	public TranslatorEntity() {
+	public HibernateTranslatorEntity() {
+	}
+
+	/**
+	 * Initiator for Hibernate Implementation.
+	 */
+	@Override
+	public void init(String libhibernate_cfg_path) {
+		HibernateUtil.initSessionFactory(libhibernate_cfg_path);
+	}
+
+	/**
+	 * Initiator for Hibernate Implementation.
+	 */
+	@Override
+	public void setFrameworkObject(Object object) {
+		if (object instanceof SessionFactory) {
+			HibernateUtil.setSessionFactory((SessionFactory) object);
+			return;
+		}
+		throw new TypeMismatchException(
+				"Object Is Not Of Type: SessionFactory"); //$NON-NLS-1$
+	}
+
+	/**
+	 * Initiator for Hibernate Implementation.
+	 */
+	@Override
+	public void shutdown() {
+		HibernateUtil.shutdown();
+	}
+
+	/**
+	 * Initiator for Hibernate Implementation.
+	 */
+	@Override
+	public void dropTable() {
+		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
+			HibernateUtil.dropTable(hibernateSession);
+			return null;
+		}, 3);
 	}
 
 	/**
@@ -80,7 +126,8 @@ public class TranslatorEntity {
 	 * @param StringIN The input value to set
 	 * @return This entity instance for chaining
 	 */
-	protected TranslatorEntity setStringIN(final Object StringIN) {
+	@Override
+	public HibernateTranslatorEntity setStringIN(final Object StringIN) {
 		if (StringIN instanceof String || StringIN instanceof Translatable) {
 			this.StringIN = (StringIN instanceof String ? (String) StringIN : StringIN.toString());
 			return this;
@@ -95,7 +142,8 @@ public class TranslatorEntity {
 	 * @param ModelCode The model code to set
 	 * @return This entity instance for chaining
 	 */
-	protected TranslatorEntity setModelCode(final String ModelCode) {
+	@Override
+	public HibernateTranslatorEntity setModelCode(final String ModelCode) {
 		this.ModelCode = ModelCode;
 		return this;
 	}
@@ -106,7 +154,8 @@ public class TranslatorEntity {
 	 * @param StringOUT The output string to set
 	 * @return This entity instance for chaining
 	 */
-	private TranslatorEntity setTranslation(final String StringOUT) {
+	@Override
+	public HibernateTranslatorEntity setTranslation(final String StringOUT) {
 		this.StringOUT = StringOUT;
 		return this;
 	}
@@ -116,7 +165,8 @@ public class TranslatorEntity {
 	 *
 	 * @return The output string
 	 */
-	protected String getTranslation() {
+	@Override
+	public String getTranslation() {
 		return this.StringOUT;
 	}
 
@@ -124,12 +174,13 @@ public class TranslatorEntity {
 	 * Saves this entity to the database. If no id exists, generates one. Otherwise,
 	 * updates the existing record.
 	 */
-	protected void save() {
+	@Override
+	public void save() {
 		if ((this.ModelCode != null) && (this.StringIN != null) && (this.StringOUT != null)) {
 			HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 				this.LastUsed = Translator.quickTimestamp.timestamp();
 				if (this.id == null) {
-					this.id = HibernateUtil.generateUniqueID(TranslatorEntity.class);
+					this.id = generateUniqueID(HibernateTranslatorEntity.class);
 					hibernateSession.persist(this);
 				} else {
 					hibernateSession.merge(this);
@@ -145,7 +196,8 @@ public class TranslatorEntity {
 	/**
 	 * Deletes this entity from the database.
 	 */
-	protected void delete() {
+	@Override
+	public void delete() {
 		if (this.id != null) {
 			HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 				hibernateSession.remove(this);
@@ -156,17 +208,19 @@ public class TranslatorEntity {
 			T_Log.log("Delete Failed: No id / This Entity Was Never Saved"); //$NON-NLS-1$
 		}
 	}
+	/// Static Acting Methods
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Static Methods
 	/**
 	 * Gets a translation by its id.
 	 *
 	 * @param id The id to search for
 	 * @return The entity if found, or null
 	 */
-	public static TranslatorEntity getTranslation(final String id) {
+	@SuppressWarnings("hiding")
+	@Override
+	public HibernateTranslatorEntity getTranslation(final String id) {
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
-			final TranslatorEntity entity = hibernateSession.get(TranslatorEntity.class, id);
+			final HibernateTranslatorEntity entity = hibernateSession.get(HibernateTranslatorEntity.class, id);
 			T_Log.log("Entity Found With id: " + id); //$NON-NLS-1$
 			return entity;
 		}, 3);
@@ -180,22 +234,23 @@ public class TranslatorEntity {
 	 * @param input     The input value to search for
 	 * @return The matching entity or null if not found
 	 */
-	public static TranslatorEntity getTranslation(final String modelCode, final Object input) {
+	@Override
+	public HibernateTranslatorEntity getTranslation(final String modelCode, final Object input) {
 		return HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 			if (input != null) {
 				final boolean isString = input instanceof String;
 				final CriteriaBuilder cb = hibernateSession.getCriteriaBuilder();
-				final CriteriaQuery<TranslatorEntity> cq = cb.createQuery(TranslatorEntity.class);
-				final Root<TranslatorEntity> root = cq.from(TranslatorEntity.class);
+				final CriteriaQuery<HibernateTranslatorEntity> cq = cb.createQuery(HibernateTranslatorEntity.class);
+				final Root<HibernateTranslatorEntity> root = cq.from(HibernateTranslatorEntity.class);
 				cq.select(root)
 						.where(
 								cb.equal(root.get(Column_modleCode), modelCode),
 								cb.equal(root.get(Column_StringIN), (isString ? (String) input : input.toString())));
-				final List<TranslatorEntity> result = hibernateSession.createQuery(cq).getResultList();
-				final List<TranslatorEntity> entitiesToRemove = new ArrayList<>();
-				TranslatorEntity lastValidEntity = null;
+				final List<HibernateTranslatorEntity> result = hibernateSession.createQuery(cq).getResultList();
+				final List<HibernateTranslatorEntity> entitiesToRemove = new ArrayList<>();
+				HibernateTranslatorEntity lastValidEntity = null;
 				// First pass: identify what to keep and what to remove
-				for (final TranslatorEntity entity : result) {
+				for (final HibernateTranslatorEntity entity : result) {
 					if ((entity.getTranslation() == null) || entity.getTranslation().isEmpty()) {
 						entitiesToRemove.add(entity);
 					} else {
@@ -205,7 +260,7 @@ public class TranslatorEntity {
 						lastValidEntity = entity;
 					}
 				}
-				for (final TranslatorEntity entityToRemove : entitiesToRemove) {
+				for (final HibernateTranslatorEntity entityToRemove : entitiesToRemove) {
 					hibernateSession.remove(entityToRemove);
 				}
 				if (lastValidEntity != null) {
@@ -224,8 +279,9 @@ public class TranslatorEntity {
 	 * @param input            The input value
 	 * @param translatedString The translated output string
 	 */
-	public static void save(final String modelCode, final Object input, final String translatedString) {
-		new TranslatorEntity().setModelCode(modelCode)
+	@Override
+	public void save(final String modelCode, final Object input, final String translatedString) {
+		new HibernateTranslatorEntity().setModelCode(modelCode)
 				.setStringIN((input instanceof String ? (String) input : input.toString()))
 				.setTranslation(translatedString)
 				.save();
@@ -237,9 +293,11 @@ public class TranslatorEntity {
 	 *
 	 * @param id The id of the entity to delete
 	 */
-	public static void delete(final String id) {
+	@SuppressWarnings("hiding")
+	@Override
+	public void delete(final String id) {
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
-			final TranslatorEntity entity = hibernateSession.get(TranslatorEntity.class, id);
+			final HibernateTranslatorEntity entity = hibernateSession.get(HibernateTranslatorEntity.class, id);
 			if (entity != null) {
 				hibernateSession.remove(entity);
 				T_Log.log("Entity Deleted"); //$NON-NLS-1$
@@ -257,19 +315,20 @@ public class TranslatorEntity {
 	 * @param input     The input value
 	 * @return The result of the operation (currently unused)
 	 */
-	public static void delete(final String modelCode, final Object input) {
+	@Override
+	public void delete(final String modelCode, final Object input) {
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 			if (input != null) {
 				final boolean isString = input instanceof String;
 				final CriteriaBuilder cb = hibernateSession.getCriteriaBuilder();
-				final CriteriaQuery<TranslatorEntity> cq = cb.createQuery(TranslatorEntity.class);
-				final Root<TranslatorEntity> root = cq.from(TranslatorEntity.class);
+				final CriteriaQuery<HibernateTranslatorEntity> cq = cb.createQuery(HibernateTranslatorEntity.class);
+				final Root<HibernateTranslatorEntity> root = cq.from(HibernateTranslatorEntity.class);
 				cq.select(root)
 						.where(
 								cb.equal(root.get(Column_modleCode), modelCode),
 								cb.equal(root.get(Column_StringIN), (isString ? (String) input : input.toString())));
-				final List<TranslatorEntity> result = hibernateSession.createQuery(cq).getResultList();
-				for (final TranslatorEntity t : result) {
+				final List<HibernateTranslatorEntity> result = hibernateSession.createQuery(cq).getResultList();
+				for (final HibernateTranslatorEntity t : result) {
 					hibernateSession.remove(t);
 				}
 			}
@@ -277,14 +336,15 @@ public class TranslatorEntity {
 		}, 3);
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Static Utility
+	/// Static Acting Utility
 	/**
 	 * Deletes duplicate translations (keeps only the latest one).
 	 */
-	public static void deleteDuplicateTranslations() {
+	@Override
+	public void deleteDuplicateTranslations() {
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
-			final String hql = "DELETE FROM " + TranslatorEntity.class.getSimpleName() //$NON-NLS-1$
-					+ " e " + "WHERE e." + Column_id + " NOT IN (" + "   SELECT MAX(e2." + Column_id + ") " + "   FROM " + TranslatorEntity.class //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
+			final String hql = "DELETE FROM " + HibernateTranslatorEntity.class.getSimpleName() //$NON-NLS-1$
+					+ " e " + "WHERE e." + Column_id + " NOT IN (" + "   SELECT MAX(e2." + Column_id + ") " + "   FROM " + HibernateTranslatorEntity.class //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
 							.getSimpleName() + " e2 " + "   GROUP BY e2." + Column_modleCode + ", e2." + Column_StringIN + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			final int deletedCount = query.executeUpdate();
@@ -296,10 +356,11 @@ public class TranslatorEntity {
 	/**
 	 * Deletes translations that haven't been used in the last 360 days.
 	 */
-	public static void deleteUnusedTranslations() {
+	@Override
+	public void deleteUnusedTranslations() {
 		final Timestamp removeTime = Timestamp.from(Instant.now().minus(360, ChronoUnit.DAYS));
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
-			final String hql = "DELETE FROM " + TranslatorEntity.class.getSimpleName() //$NON-NLS-1$
+			final String hql = "DELETE FROM " + HibernateTranslatorEntity.class.getSimpleName() //$NON-NLS-1$
 					+ " e WHERE e." + Column_LastUsed + " < :cutoff"; //$NON-NLS-1$ //$NON-NLS-2$
 			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			query.setParameter("cutoff", removeTime); //$NON-NLS-1$
@@ -312,9 +373,10 @@ public class TranslatorEntity {
 	/**
 	 * Deletes all translations from the database.
 	 */
-	public static void deleteAllTranslations() {
+	@Override
+	public void deleteAllTranslations() {
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
-			final String hql = "DELETE FROM " + TranslatorEntity.class.getSimpleName(); //$NON-NLS-1$
+			final String hql = "DELETE FROM " + HibernateTranslatorEntity.class.getSimpleName(); //$NON-NLS-1$
 			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			final int deletedCount = query.executeUpdate();
 			T_Log.log("Deleted All Translations: " + deletedCount); //$NON-NLS-1$
@@ -323,92 +385,147 @@ public class TranslatorEntity {
 	}
 
 	/**
+	 * Checks if an id already exists in the database.
+	 *
+	 * @param Id The id to look for
+	 * @return True if the id exists, false otherwise
+	 */
+	@SuppressWarnings("hiding")
+	@Override
+	public boolean idExists(final String id) {
+		return HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
+			final String entityName = HibernateTranslatorEntity.class.getSimpleName();
+			final String hql = "SELECT COUNT(e) FROM " + entityName + " e WHERE e." + Column_id + " = :" + Column_id; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			final Query<Long> query = hibernateSession.createQuery(hql, Long.class);
+			query.setParameter(Column_id, id);
+			final Long count = query.uniqueResult();
+			return Boolean.valueOf(count.longValue() > 0);
+		}, 3).booleanValue();
+	}
+
+	/**
+	 * Generates a unique id for this entity type. Ensures the generated id does not
+	 * already exist in the database.
+	 *
+	 * @param entityClass The class of the entity (used to check existence)
+	 * @return A unique string id
+	 */
+	@Override
+	public String generateUniqueID(final Class<?> entityClass) {
+		final String CHARACTERS = "abcdefghijklmnopqrstuvqxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; //$NON-NLS-1$
+		final int id_Length = 7;
+		String newId;
+		do {
+			final StringBuilder sb = new StringBuilder(
+					id_Length);
+			for (int i = 0; i < id_Length; i++) {
+				final int randomIndex = HibernateUtil.secureRandom.nextInt(CHARACTERS.length());
+				final char randomChar = CHARACTERS.charAt(randomIndex);
+				sb.append(randomChar);
+			}
+			newId = sb.toString();
+		} while (idExists(newId));
+		return newId;
+	}
+
+	/**
 	 * Utility class for managing Hibernate sessions and transactions and ids.
 	 */
-	static class HibernateUtil {
-		// Default config from jar resource paths
-		private static final String cfg = ToConfigFiles.libhibernate;
-		// Session factory used to create sessions
-		static SessionFactory sessionFactory;
-		// Secure random instance for generating unique IDs
-		static final SecureRandom secureRandom = new SecureRandom();
+	private static class HibernateUtil {
+		private class HibernateConfigMapper {
+			private record DbDetails(String dialect, String driver) {
+			}
 
-		/**
-		 * Generates a unique id for this entity type. Ensures the generated id does not
-		 * already exist in the database.
-		 *
-		 * @param entityClass The class of the entity (used to check existence)
-		 * @return A unique string id
-		 */
-		static String generateUniqueID(final Class<?> entityClass) {
-			final String CHARACTERS = "abcdefghijklmnopqrstuvqxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; //$NON-NLS-1$
-			final int id_Length = 7;
-			String id;
-			do {
-				final StringBuilder sb = new StringBuilder(
-						id_Length);
-				for (int i = 0; i < id_Length; i++) {
-					final int randomIndex = secureRandom.nextInt(CHARACTERS.length());
-					final char randomChar = CHARACTERS.charAt(randomIndex);
-					sb.append(randomChar);
-				}
-				id = sb.toString();
-			} while (idExists(entityClass, id));
-			return id;
+			private static final Map<Database, DbDetails> MAPPINGS = new HashMap<>();
+			static {
+				MAPPINGS.put(
+						Database.MARIADB,
+						new DbDetails(
+								"org.hibernate.dialect.MariaDBDialect", //$NON-NLS-1$
+								"org.mariadb.jdbc.Driver")); //$NON-NLS-1$
+				MAPPINGS.put(
+						Database.MYSQL,
+						new DbDetails(
+								"org.hibernate.dialect.MySQLDialect", //$NON-NLS-1$
+								"com.mysql.cj.jdbc.Driver")); //$NON-NLS-1$
+				MAPPINGS.put(
+						Database.POSTGRESQL,
+						new DbDetails(
+								"org.hibernate.dialect.PostgreSQLDialect", //$NON-NLS-1$
+								"org.postgresql.Driver")); //$NON-NLS-1$
+				MAPPINGS.put(
+						Database.H2,
+						new DbDetails(
+								"org.hibernate.dialect.H2Dialect", //$NON-NLS-1$
+								"org.h2.Driver")); //$NON-NLS-1$
+			}
+
+			private static DbDetails getDetails() {
+				return MAPPINGS.get(Translator.database);
+			}
 		}
 
+		// Default config from jar resource paths
+		private static String cfg = ToConfigFiles.libhibernate;
+		// Session factory used to create sessions
+		private static SessionFactory sessionFactory;
+		// Secure random instance for generating unique IDs
+		private static final SecureRandom secureRandom = new SecureRandom();
+
 		/**
-		 * Checks if an id already exists in the database.
+		 * Sets the Hibernate session factory.
 		 *
-		 * @param entityClass The entity class to check
-		 * @param Id          The id to look for
-		 * @return True if the id exists, false otherwise
 		 */
-		static boolean idExists(final Class<?> entityClass, final String Id) {
-			return HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
-				final String entityName = entityClass.getSimpleName();
-				final String hql = "SELECT COUNT(e) FROM " + entityName + " e WHERE e." + Column_id + " = :id"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-				final Query<Long> query = hibernateSession.createQuery(hql, Long.class);
-				query.setParameter("id", Id); //$NON-NLS-1$
-				final Long count = query.uniqueResult();
-				return Boolean.valueOf(count.longValue() > 0);
-			}, 3).booleanValue();
+		private static synchronized void setSessionFactory(SessionFactory newSessionFactory) {
+			if (sessionFactory == null) {
+				sessionFactory = newSessionFactory;
+			}
+			return;
 		}
 
 		/**
 		 * Initializes the Hibernate session factory.
 		 *
-		 * @return The initialized session factory
+		 * @param libhibernate_cfg_path Path to config file
 		 */
-		static synchronized SessionFactory initSessionFactory() {
-			try {
-				final Configuration configuration = new Configuration();
-				if (Translator.libhiberbernate != null) {
-					configuration
-							.configure(Thread.currentThread().getContextClassLoader().getResource(Translator.libhiberbernate));
-				} else {
-					configuration.configure(cfg);
+		private static synchronized void initSessionFactory(String libhibernate_cfg_path) {
+			if (sessionFactory == null) {
+				try {
+					final Configuration configuration = new Configuration();
+					// 1. Detect config file and apply to configuration
+					if (libhibernate_cfg_path != null) {
+						cfg = libhibernate_cfg_path;
+						configuration.configure(Thread.currentThread().getContextClassLoader().getResource(cfg));
+					} else {
+						configuration.configure(cfg);
+					}
+					// 2. Get the correct Dialect and Driver strings for that DB
+					HibernateConfigMapper.DbDetails details = HibernateConfigMapper.getDetails();
+					// 3. Programmatically configure Hibernate
+					configuration.setProperty("hibernate.dialect", details.dialect()); //$NON-NLS-1$
+					configuration.setProperty("hibernate.connection.driver_class", details.driver()); //$NON-NLS-1$
+					T_Log.log("Initializing Hibernate Session Factory: " + HibernateTranslatorEntity.class.getSimpleName()); //$NON-NLS-1$
+					configuration.addAnnotatedClass(HibernateTranslatorEntity.class);
+					sessionFactory = configuration.buildSessionFactory();
+					T_Log.log("Initialized successfully."); //$NON-NLS-1$
+					return;
+				} catch (ExceptionInInitializerError | Exception e) {
+					T_Log.log(
+							"Error initializing Hibernate Session Factory: " + HibernateTranslatorEntity.class.getSimpleName(), //$NON-NLS-1$
+							e);
+					return;
 				}
-				T_Log.log("Initializing Hibernate Session Factory: " + TranslatorEntity.class.getName()); //$NON-NLS-1$
-				configuration.addAnnotatedClass(TranslatorEntity.class);
-				final SessionFactory UniqueSessionFactory = configuration.buildSessionFactory();
-				T_Log.log("Initialized successfully."); //$NON-NLS-1$
-				return UniqueSessionFactory;
-			} catch (ExceptionInInitializerError | Exception e) {
-				T_Log.log("Error initializing Hibernate Session Factory: " + TranslatorEntity.class.getName(), e); //$NON-NLS-1$
-				return null;
 			}
+			return;
 		}
 
 		/**
 		 * Drops a table from the database.
 		 *
 		 * @param hibernateSession The current Hibernate session
-		 * @param simpleTableName  The simple name of the table to drop
-		 * @return True if successful
 		 */
-		static synchronized void dropTable(final Session hibernateSession, final String simpleTableName) {
-			final String sql = "DROP TABLE IF EXISTS " + simpleTableName; //$NON-NLS-1$
+		private static synchronized void dropTable(final Session hibernateSession) {
+			final String sql = "DROP TABLE IF EXISTS " + HibernateTranslatorEntity.class.getSimpleName(); //$NON-NLS-1$
 			hibernateSession.createMutationQuery(sql).executeUpdate();
 			T_Log.log("Table Deleted"); //$NON-NLS-1$
 		}
@@ -416,7 +533,7 @@ public class TranslatorEntity {
 		/**
 		 * Shuts down all Hibernate session factories and deregisters the JDBC driver.
 		 */
-		static synchronized void shutdown() {
+		private static synchronized void shutdown() {
 			try {
 				sessionFactory.close();
 				T_Log.log("SessionFactories Shutdown"); //$NON-NLS-1$
@@ -461,7 +578,7 @@ public class TranslatorEntity {
 		 * @return Result of the action
 		 * @throws IllegalStateException if all retries fail
 		 */
-		static <T> T createSessionAndExecuteTransactionWithRetry(final Function<Session, T> action, final int maxRetries) {
+		private static <T> T createSessionAndExecuteTransactionWithRetry(final Function<Session, T> action, final int maxRetries) {
 			int retryCount = 0;
 			while (retryCount <= maxRetries) {
 				Transaction transaction = null;

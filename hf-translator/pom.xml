@@ -38,13 +38,6 @@
 			<version>76.1</version>
 		</dependency>
 
-		<!-- MariaDB JDBC Driver - for Java 23 TLS/security patches -->
-		<dependency>
-			<groupId>org.mariadb.jdbc</groupId>
-			<artifactId>mariadb-java-client</artifactId>
-			<version>3.5.1</version>
-		</dependency>
-
 		<!-- Logging FACADE (API) - for Java 17+ -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -71,6 +64,15 @@
 			<scope>provided</scope>
 			<optional>true</optional>
 			<!-- WARNING: This drops Java 8/11 parent support entirely. -->
+		</dependency>
+		
+		<!-- MariaDB JDBC Driver - for Java 23 TLS/security patches -->
+		<dependency>
+			<groupId>org.mariadb.jdbc</groupId>
+			<artifactId>mariadb-java-client</artifactId>
+			<version>3.5.1</version>
+			<scope>provided</scope>
+			<optional>true</optional>
 		</dependency>
 
 		<!-- ========================================================== -->

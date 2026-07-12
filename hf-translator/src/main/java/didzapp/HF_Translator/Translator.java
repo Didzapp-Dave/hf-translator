@@ -62,10 +62,10 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import HibernateSupport.HibernateTranslatorEntity;
 import didzapp.T_Log;
 import didzapp.HF_Translator.TranslatorContent.FolderName;
 import didzapp.HF_Translator.TranslatorContent.Translatable;
-import didzapp.HF_Translator.TranslatorEntity.HibernateUtil;
 import didzapp.HF_Translator.TranslatorResourcePaths.ToFlatpickr;
 import didzapp.HF_Translator.TranslatorResourcePaths.ToPyFiles;
 
@@ -101,13 +101,11 @@ public class Translator {
 	//
 	// Config, maintenance and global settings
 	static boolean runningMaintenance = false;
-	static boolean doModels = true;
 	static boolean doFlatpickerFiles = true;
-	static boolean redoTranslationsInTable = false;
 	static boolean universalTranslations = false;
+	public static DetectionUtils.Framework framework = null;
+	public static DetectionUtils.Database database = null;
 	//
-	// External resource, hibernate config file path, "/libhibernate.cfg.xml"
-	static String libhiberbernate;
 	//
 	// Values
 	// Folder for model storage
@@ -297,59 +295,74 @@ public class Translator {
 	 * languages, Hibernate configuration, model storage path, and content classes.
 	 * It prepares necessary resources for translation.
 	 *
-	 * @param defaultLang                   Default language to be used, can be
-	 *                                      null: default (English)
-	 * @param languages                     Array of supported languages; if null,
-	 *                                      all languages are used
+	 * @param frameworkObject                Object used to manage framework
+	 *                                       interactions
 	 * 
-	 * @param runLanguageDetectorService    If true, all models between supported
-	 *                                      languages will be downloaded. If false
-	 *                                      just default to supported languages &
-	 *                                      supported languages to default
-	 * @param universalTranslationMode      If true, the language detector model
-	 *                                      will remain in memory and accessable for
-	 *                                      faster detecting
+	 * @param database_framework_config_path Framework config file path
 	 * 
-	 * @param redoTranslationsAndModelFiles If true, re-downloads all model files,
-	 *                                      remakes models and re-translates all
-	 *                                      content
-	 * @param feedContentToDatabase         If true, translates or checks
-	 *                                      availability for all content in
-	 *                                      contentClasses
+	 * @param default_language               Default language to be used (can be
+	 *                                       null: default (English))
 	 * 
-	 * @param platform                      Platform application is going to run on
-	 * @param doFullTranslatorTest          Full test on all translate methods, 3
-	 *                                      times over (uses 3 available languages,
-	 *                                      long wait time)
+	 * @param language_selection             Array of supported languages; if null,
+	 *                                       all languages are used
 	 * 
-	 *                                      translations before proceeding
-	 * @param debugMode                     Enables detailed logging during
-	 * @param testingMode                   Enables test-specific logging or
-	 *                                      behavior
-	 * @param showCriticalErrors            Whether critical errors should be logged
-	 *                                      when not debugging
-	 * @param showIgnoredErrors             Whether ignored errors should be logged
-	 *                                      when not debugging
-	 * @param siteOrAppIdentifier           Identifier for the current
-	 *                                      application/site
+	 * @param run_language_detector          If true, the language detector model
+	 *                                       will remain in memory and accessable
+	 *                                       for faster detecting
 	 * 
+	 * @param universal_translation_mode     If true, the language detector model
+	 *                                       will remain in memory and accessable
+	 *                                       for faster detecting
 	 * 
-	 * @param modelStoragePath              Path where translation models will be
-	 *                                      stored locally
-	 * @param contentClasses                Classes containing content enums
-	 *                                      (Translatable) that need translating
+	 * @param model_reset                    If true, re-downloads all model files,
+	 *                                       remakes models
+	 * 
+	 * @param translation_reset              If true, re-translates all content
+	 * 
+	 * @param feed_content                   If true, translates or checks
+	 *                                       availability for all content in
+	 *                                       contentClasses
+	 * 
+	 * @param debugMode                      Enables detailed logging during
+	 * 
+	 * @param testingMode                    Enables test-specific logging or
+	 *                                       behavior
+	 * 
+	 * @param showCriticalErrors             Whether critical errors should be
+	 *                                       logged when not debugging
+	 * 
+	 * @param showIgnoredErrors              Whether ignored errors should be logged
+	 *                                       when not debugging
+	 * 
+	 * @param siteOrAppIdentifier            Identifier for the current
+	 *                                       application/site
+	 * 
+	 * @param platform                       Platform application is going to run on
+	 * 
+	 * @param doFullTranslatorTest           Full test on all translate methods, 3
+	 *                                       times over (uses 3 available languages,
+	 *                                       long wait time)
+	 * 
+	 * @param modelStoragePath               Directory where translation models are
+	 *                                       stored
+	 * 
+	 * @param contentClasses                 Classes containing enums with
+	 *                                       translatable strings
+	 * 
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
 	 */
-	public static boolean init(Locale defaultLang, List<Locale> languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, boolean feedContentToDatabase, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
 		return init(
 				null,
-				defaultLang,
-				languageSelection,
-				runLanguageDetectorService,
-				universalTranslationMode,
-				redoTranslationsAndModelFiles,
-				feedContentToDatabase,
+				null,
+				default_language,
+				language_selection,
+				run_language_detector,
+				universal_translation_mode,
+				model_reset,
+				translation_reset,
+				feed_content,
 				platform,
 				debugMode,
 				testingMode,
@@ -360,70 +373,66 @@ public class Translator {
 				contentClasses);
 	}
 
-	/**
-	 * Initializes the translation system with default language settings, selected
-	 * languages, Hibernate configuration, model storage path, and content classes.
-	 * It prepares necessary resources for translation.
-	 *
-	 * @param servletContext                Servlet context
-	 * @param libhiberbernate_CFG_XML_Path  Hibernate config file path
-	 * 
-	 * @param defaultLang                   Default language to be used (can be
-	 *                                      null: default (English))
-	 * @param languageSelection             Array of supported languages; if null,
-	 *                                      all languages are used
-	 * @param runLanguageDetectorService    If true, the language detector model
-	 *                                      will remain in memory and accessable for
-	 *                                      faster detecting
-	 * @param universalTranslationMode      If true, the language detector model
-	 *                                      will remain in memory and accessable for
-	 *                                      faster detecting
-	 * 
-	 * @param redoTranslationsAndModelFiles If true, re-downloads all model files,
-	 *                                      remakes models and re-translates all
-	 *                                      content
-	 * 
-	 * @param feedContentToDatabase         If true, translates or checks
-	 *                                      availability for all content in
-	 *                                      contentClasses
-	 * 
-	 * @param debugMode                     Enables detailed logging during
-	 * @param testingMode                   Enables test-specific logging or
-	 *                                      behavior
-	 * @param showCriticalErrors            Whether critical errors should be logged
-	 *                                      when not debugging
-	 * @param showIgnoredErrors             Whether ignored errors should be logged
-	 *                                      when not debugging
-	 * @param siteOrAppIdentifier           Identifier for the current
-	 *                                      application/site
-	 * @param platform                      Platform application is going to run on
-	 * @param doFullTranslatorTest          Full test on all translate methods, 3
-	 *                                      times over (uses 3 available languages,
-	 *                                      long wait time)
-	 * 
-	 * @param modelStoragePath              Directory where translation models are
-	 *                                      stored
-	 * @param contentClasses                Classes containing enums with
-	 *                                      translatable strings
-	 * @return Returns true after successfully completing initialization steps,
-	 *         false otherwise
-	 */
-	public static boolean init(String libhiberbernate_CFG_XML_Path, Locale defaultLang, List<Locale> languageSelection, boolean runLanguageDetectorService, boolean universalTranslationMode, boolean redoTranslationsAndModelFiles, boolean feedContentToDatabase, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
-		if (!runningMaintenance && doModels) {
+	public static boolean init(String database_framework_config_path, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+		return init(
+				null,
+				database_framework_config_path,
+				default_language,
+				language_selection,
+				run_language_detector,
+				universal_translation_mode,
+				model_reset,
+				translation_reset,
+				feed_content,
+				platform,
+				debugMode,
+				testingMode,
+				showCriticalErrors,
+				showIgnoredErrors,
+				siteOrAppIdentifier,
+				modelStoragePath,
+				contentClasses);
+	}
+
+	public static boolean init(Object framework_object, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+		return init(
+				framework_object,
+				null,
+				default_language,
+				language_selection,
+				run_language_detector,
+				universal_translation_mode,
+				model_reset,
+				translation_reset,
+				feed_content,
+				platform,
+				debugMode,
+				testingMode,
+				showCriticalErrors,
+				showIgnoredErrors,
+				siteOrAppIdentifier,
+				modelStoragePath,
+				contentClasses);
+	}
+
+	public static boolean init(Object framework_object, String database_framework_config_path, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+		if (!runningMaintenance && framework == null) {
 			//
 			runningMaintenance = true;
 			//
-			HibernateUtil.sessionFactory = HibernateUtil.initSessionFactory();
+			framework = DetectionUtils.detectFramework();
+			database = DetectionUtils.detectDatabase();
+			if (framework_object == null) {
+				getDatabaseManagement().init(database_framework_config_path != null ? database_framework_config_path : null);
+			} else {
+				getDatabaseManagement().setFrameworkObject(framework_object);
+			}
 			//
-			redoTranslationsInTable = redoTranslationsAndModelFiles;
-			universalTranslations = universalTranslationMode;
+			universalTranslations = universal_translation_mode;
 			T_Log.debug = debugMode;
 			T_Log.testing = testingMode;
 			T_Log.showCritical = showCriticalErrors;
 			T_Log.showIgnored = showIgnoredErrors;
-			if (libhiberbernate_CFG_XML_Path != null) {
-				libhiberbernate = libhiberbernate_CFG_XML_Path;
-			}
 			if (siteOrAppIdentifier != null) {
 				siteOrAppId = siteOrAppIdentifier;
 			}
@@ -444,21 +453,21 @@ public class Translator {
 			}
 			// dont change this init order: shared > main > folder
 			sharedPathString = modelPath + "/hf-translator_"; //$NON-NLS-1$
-			mainPathString = modelPath + "/hf-translator_" + Translator.siteOrAppId; //$NON-NLS-1$
+			mainPathString = modelPath + "/hf-translator_" + siteOrAppId; //$NON-NLS-1$
 			languageModelFolder = FolderName.LanguageModels;
 			//
-			if (languageSelection == null) {
+			if (language_selection == null) {
 				for (Locale availableLanguage : Locale.getAvailableLocales()) {
 					selectedLanguages.add(availableLanguage);
 				}
 			} else {
-				for (Locale selectedLanguage : languageSelection) {
+				for (Locale selectedLanguage : language_selection) {
 					selectedLanguages.add(selectedLanguage);
 				}
 			}
 			//
 			T_Log.log("Starting Language Detection Model..."); //$NON-NLS-1$
-			alwaysRunDetector = runLanguageDetectorService;
+			alwaysRunDetector = run_language_detector;
 			if (alwaysRunDetector) {
 				defaultLanguage = runLanguageDetectorService("Testing, testing, is this thing working?"); //$NON-NLS-1$
 			} else {
@@ -470,24 +479,22 @@ public class Translator {
 			}
 			T_Log.log("Language Detection Working"); //$NON-NLS-1$
 			//
-			if (defaultLang != null) {
-				defaultLanguage = defaultLang;
+			if (default_language != null) {
+				defaultLanguage = default_language;
 			}
 			//
 			//
-			if (redoTranslationsInTable) {
-				TranslatorEntity.deleteAllTranslations();
+			if (translation_reset) {
+				getDatabaseManagement().deleteAllTranslations();
 			} else {
-				TranslatorEntity.deleteUnusedTranslations();
-				TranslatorEntity.deleteDuplicateTranslations();
+				getDatabaseManagement().deleteUnusedTranslations();
+				getDatabaseManagement().deleteDuplicateTranslations();
 			}
-			downloadFilesAndCreateModels(defaultLanguage, true);
-			redoTranslationsInTable = false;
+			downloadFilesAndCreateModels(model_reset, defaultLanguage, true);
 			//
-			doModels = false;
 			runningMaintenance = false;
 			//
-			if (feedContentToDatabase) {
+			if (feed_content) {
 				final TranslateStacker translateStacker = new TranslateStacker();
 				if (contentClasses != null && contentClasses.length > 0) {
 					for (Class<?> clazz : contentClasses) {
@@ -536,19 +543,32 @@ public class Translator {
 	/**
 	 * Performs maintenance tasks like deleting unused/duplicate translations and
 	 * re-downloading models.
-	 *
+	 * 
 	 * @return Returns true after successfully completing maintenance steps, false
 	 *         otherwise
 	 */
 	public static boolean maintain() {
+		return maintain(false);
+	}
+
+	/**
+	 * Performs maintenance tasks like deleting unused/duplicate translations and
+	 * re-downloading models.
+	 * 
+	 * @param model_reset Whether to re-download and re-create models
+	 *
+	 * @return Returns true after successfully completing maintenance steps, false
+	 *         otherwise
+	 */
+	public static boolean maintain(boolean model_reset) {
 		if (!runningMaintenance) {
 			//
 			runningMaintenance = true;
 			//
-			TranslatorEntity.deleteUnusedTranslations();
-			TranslatorEntity.deleteDuplicateTranslations();
+			getDatabaseManagement().deleteUnusedTranslations();
+			getDatabaseManagement().deleteDuplicateTranslations();
 			//
-			downloadFilesAndCreateModels(defaultLanguage, true);
+			downloadFilesAndCreateModels(model_reset, defaultLanguage, true);
 			//
 			runningMaintenance = false;
 		}
@@ -560,20 +580,8 @@ public class Translator {
 	 * 
 	 */
 	public static synchronized void shutdown() {
-		TranslatorEntity.HibernateUtil.shutdown();
+		new HibernateTranslatorEntity().shutdown();
 		closeLanguageDetectorService();
-	}
-
-	/**
-	 * Sets whether to re-download modelfiles at start-up and redo translations.
-	 * delete, translate and re-save. If set after start-up it will redo translation
-	 * as and when they are called untill turned off.
-	 *
-	 * @param reCreate Whether to delete existing models files and translation
-	 *                 entries before adding new ones
-	 */
-	public static void setReCreateAll(boolean reCreate) {
-		redoTranslationsInTable = reCreate;
 	}
 
 	/**
@@ -613,23 +621,35 @@ public class Translator {
 	 * @param fileName Name of the file to fetch
 	 * @return Full URL for downloading the specified file
 	 */
-	private static String huggingURL(final Locale langIn, final Locale langOut, final String fileName) {
+	private static String getHuggingURL(final Locale langIn, final Locale langOut, final String fileName) {
 		String localeCodeIn = langIn.getLanguage();
 		String localeCodeOut = langOut.getLanguage();
 		return "https://huggingface.co/Helsinki-NLP/opus-mt-" + localeCodeIn + "-" + localeCodeOut + "/resolve/main/" + fileName; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
 	/**
+	 * Returns the entity for the database framework in use.
+	 *
+	 */
+	private static TranslatorDatabaseManagement getDatabaseManagement() {
+		if (framework.equals(DetectionUtils.Framework.HIBERNATE)) {
+			return new HibernateTranslatorEntity();
+		}
+		return null;
+	}
+
+	/**
 	 * Ensures that the CTranslate2 model exists for a given language pair. If not,
 	 * generates it via Python script. If this fails, language is marked un-usable.
 	 *
-	 * @param modelDir Root directory of the model folder
-	 * @param langIN   Source language
-	 * @param langOUT  Target language
+	 * @param model_reset If true, re-downloads all model files, remakes models
+	 * @param modelDir    Root directory of the model folder
+	 * @param langIN      Source language
+	 * @param langOUT     Target language
 	 * @throws Exception On failure to generate or validate model, language is
 	 *                   marked un-usable.
 	 */
-	private static void ensureCTranslate2(final Path modelDir, final Locale langIN, final Locale langOUT) throws Exception {
+	private static void ensureCTranslate2(boolean model_reset, final Path modelDir, final Locale langIN, final Locale langOUT) throws Exception {
 		try {
 			exportPYFiles();
 			String hashString = sha512(Files.readString(scriptFileGenerate.toPath(), StandardCharsets.UTF_8));
@@ -646,7 +666,7 @@ public class Translator {
 			final Path outDir = modelDir.resolve(ToPyFiles.generatedModelFolder);
 			final Path modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
 			if (Files.exists(modelBin)) {
-				if (redoTranslationsInTable) {
+				if (model_reset) {
 					if (delete_Folder(outDir)) {
 						T_Log.log(modelDir + "Model Already Exists, Deleting And Re-creating."); //$NON-NLS-1$
 					} else {
@@ -1141,24 +1161,24 @@ public class Translator {
 					|| !sha512(Files.readString(scriptFileTranslate.toPath(), StandardCharsets.UTF_8))
 							.equals(hashFileTranslate)) {
 				scriptFileGenerate = Extract.ToFileSystem.fromClassPathContext(
-						TranslatorEntity.class,
+						HibernateTranslatorEntity.class,
 						languageModelFolder.getTempPath(),
 						ToPyFiles.generateModelPY,
 						ToPyFiles.generateModelPYName,
 						ToPyFiles.pythonSuffix);
 				hashFileGenerate = sha512(Files.readString(scriptFileGenerate.toPath(), StandardCharsets.UTF_8));
 				scriptFileTranslate = Extract.ToFileSystem.fromClassPathContext(
-						TranslatorEntity.class,
+						HibernateTranslatorEntity.class,
 						languageModelFolder.getTempPath(),
 						ToPyFiles.translatePY,
 						ToPyFiles.translatePYName,
 						ToPyFiles.pythonSuffix);
 				hashFileTranslate = sha512(Files.readString(scriptFileTranslate.toPath(), StandardCharsets.UTF_8));
 				scriptFileDetectLanguage = Extract.ToFileSystem.fromClassPathContext(
-						TranslatorEntity.class,
+						HibernateTranslatorEntity.class,
 						Extract.ToFileSystem
 								.fromClassPathContext(
-										TranslatorEntity.class,
+										HibernateTranslatorEntity.class,
 										languageModelFolder.getPath(),
 										ToPyFiles.conLID_Folder)
 								.getAbsolutePath(),
@@ -1327,11 +1347,18 @@ public class Translator {
 	 * language models. This method iterates over all available languages, downloads
 	 * the required model files, and handles errors by deleting the model directory
 	 * if a download fails and marking the language as un-usable.
+	 * 
+	 * @param model_reset If true, re-downloads all model files, remakes models
+	 * 
+	 * @param lang        The starting language in the chain
+	 * 
+	 * @param firstCall   If this is the first time this method is called in the
+	 *                    chain
 	 *
 	 * @throws Exception If an error occurs during the download or file handling
 	 *                   process. Marks the language as un-usable.
 	 */
-	private static void downloadFilesAndCreateModels(Locale lang, boolean firstCall) {
+	private static void downloadFilesAndCreateModels(boolean model_reset, Locale lang, boolean firstCall) {
 		for (final Locale lang2 : selectedLanguages) {
 			boolean defaultToCleintSuccess = false;
 			if ((!lang.equals(lang2)) && (!lang.getLanguage().equals(lang2.getLanguage()))) {
@@ -1342,7 +1369,7 @@ public class Translator {
 					try {
 						Files.createDirectories(modelDir);
 						T_Log.log("Downloading Model: " + lang + "-" + lang2); //$NON-NLS-1$ //$NON-NLS-2$
-						downloadModelFiles(client, modelDir, lang, lang2);
+						downloadModelFiles(model_reset, client, modelDir, lang, lang2);
 						defaultToCleintSuccess = true;
 						if (languagesLinks.get(lang.getLanguage()) == null) {
 							languagesLinks.put(lang.getLanguage(), new ArrayList<>());
@@ -1380,7 +1407,7 @@ public class Translator {
 							modelBin = outDir.resolve("model.bin"); //$NON-NLS-1$
 							Files.createDirectories(modelDir);
 							T_Log.log("Downloading Model: " + lang2 + "-" + lang); //$NON-NLS-1$ //$NON-NLS-2$
-							downloadModelFiles(client, modelDir, lang2, lang);
+							downloadModelFiles(model_reset, client, modelDir, lang2, lang);
 							if (languagesLinks.get(lang2.getLanguage()) == null) {
 								languagesLinks.put(lang2.getLanguage(), new ArrayList<>());
 							}
@@ -1390,7 +1417,7 @@ public class Translator {
 								languagesLinks.put(lang2.getLanguage(), newList);
 							}
 							if (firstCall && universalTranslations) {
-								downloadFilesAndCreateModels(lang2, false);
+								downloadFilesAndCreateModels(model_reset, lang2, false);
 							}
 						} catch (final Exception e) {
 							if (!universalTranslations) {
@@ -1426,18 +1453,19 @@ public class Translator {
 	 * Validates downloaded content to ensure it's not empty or invalid before
 	 * saving.
 	 *
-	 * @param client   The HTTP client used for downloading files.
-	 * @param modelDir The directory where the model files will be saved.
-	 * @param langIn   The source language for the translation model.
-	 * @param langOut  The target language for the translation model.
+	 * @param model_reset If true, re-downloads all model files
+	 * @param client      The HTTP client used for downloading files.
+	 * @param modelDir    The directory where the model files will be saved.
+	 * @param langIn      The source language for the translation model.
+	 * @param langOut     The target language for the translation model.
 	 * @throws Exception If an error occurs during file download or validation.
 	 */
-	private static void downloadModelFiles(final HttpClient client, final Path modelDir, final Locale langIn, final Locale langOut) throws Exception {
+	private static void downloadModelFiles(boolean model_reset, final HttpClient client, final Path modelDir, final Locale langIn, final Locale langOut) throws Exception {
 		Path outPath = null;
 		for (final String file : MODEL_FILES_TO_DOWNLOAD) {
 			outPath = modelDir.resolve(file);
 			if (Files.exists(outPath)) {
-				if (redoTranslationsInTable) {
+				if (model_reset) {
 					if (delete_File(outPath)) {
 						T_Log.log(file + "File Already Exists, Deleting And Re-Downloading."); //$NON-NLS-1$
 					} else {
@@ -1450,7 +1478,7 @@ public class Translator {
 			}
 			T_Log.log("Downloading " + file); //$NON-NLS-1$
 			try {
-				final String url = huggingURL(langIn, langOut, file);
+				final String url = getHuggingURL(langIn, langOut, file);
 				T_Log.log("Connecting To: " + url); //$NON-NLS-1$
 				downloadFile(client, url, outPath);
 				if (!Files.exists(outPath)) {
@@ -1470,7 +1498,7 @@ public class Translator {
 			}
 		}
 		try {
-			ensureCTranslate2(modelDir, langIn, langOut);
+			ensureCTranslate2(model_reset, modelDir, langIn, langOut);
 			downloadFlatpickerFile(langIn);
 		} catch (final Exception e) {
 			throw e;
@@ -1491,7 +1519,7 @@ public class Translator {
 				// Get the directory where the JAR is located
 				Path jarDir;
 				try {
-					jarDir = Path.of(TranslatorEntity.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+					jarDir = Path.of(HibernateTranslatorEntity.class.getProtectionDomain().getCodeSource().getLocation().toURI())
 							.getParent();
 					Path baseDir = jarDir.resolve(flatpickrResourcePath);
 					// Now use baseDir for saving files
@@ -1586,7 +1614,7 @@ public class Translator {
 	 * database asynchronously.
 	 */
 	public static class TranslateStacker {
-		private boolean redoTranslationsInTableStacker = redoTranslationsInTable;
+		private boolean redoTranslationsInTableStacker = false;
 		private boolean doAsList = true;
 
 		/**
@@ -1871,7 +1899,7 @@ public class Translator {
 	 *         if no translation is available.
 	 */
 	public static String translate(final Locale to, final Object input) {
-		return translate(null, to, input, redoTranslationsInTable);
+		return translate(null, to, input, false);
 	}
 
 	/**
@@ -1885,7 +1913,7 @@ public class Translator {
 	 *         if no translation is available.
 	 */
 	public static String translate(final Locale from, final Locale to, final Object input) {
-		return translate(from, to, input, redoTranslationsInTable);
+		return translate(from, to, input, false);
 	}
 
 	/**
@@ -1950,7 +1978,7 @@ public class Translator {
 	 *         if no translation is available..
 	 */
 	public static <T> Map<T, String> translate(final Locale to, final List<T> inputs) {
-		return translate(null, to, inputs, true, redoTranslationsInTable);
+		return translate(null, to, inputs, true, false);
 	}
 
 	/**
@@ -1967,7 +1995,7 @@ public class Translator {
 	 *         if no translation is available..
 	 */
 	public static <T> Map<T, String> translate(final Locale to, final List<T> inputs, final boolean doAsList) {
-		return translate(null, to, inputs, doAsList, redoTranslationsInTable);
+		return translate(null, to, inputs, doAsList, false);
 	}
 
 	/**
@@ -1983,7 +2011,7 @@ public class Translator {
 	 *         if no translation is available..
 	 */
 	public static <T> Map<T, String> translate(final Locale from, final Locale to, final List<T> inputs) {
-		return translate(null, to, inputs, true, redoTranslationsInTable);
+		return translate(null, to, inputs, true, false);
 	}
 
 	/**
@@ -2000,7 +2028,7 @@ public class Translator {
 	 *         if no translation is available..
 	 */
 	public static <T> Map<T, String> translate(final Locale from, final Locale to, final List<T> inputs, final boolean doAsList) {
-		return translate(null, to, inputs, doAsList, redoTranslationsInTable);
+		return translate(null, to, inputs, doAsList, false);
 	}
 
 	/**
@@ -2248,6 +2276,7 @@ public class Translator {
 		final Map<T, String> found = new LinkedHashMap<>();
 		final List<String> missing = new ArrayList<>();
 		final List<?> list = inputs;
+		TranslatorDatabaseManagement translator = getDatabaseManagement();
 		for (int i = 0; i < list.size(); i++) {
 			if (!(list.get(i) instanceof String) && !(list.get(i) instanceof Translatable)) {
 				T_Log.log("Not Correct Input Type At Database Search, Removed"); //$NON-NLS-1$
@@ -2258,16 +2287,22 @@ public class Translator {
 				continue;
 			}
 			T_Log.log("Searching Database For Listed Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
-			final TranslatorEntity translated = TranslatorEntity.getTranslation(modelCode, key);
-			if (translated == null || translated.getTranslation() == null) {
-				missing.add(key);
-			} else if (redoTranslations) {
-				TranslatorEntity.delete(modelCode, key);
-				T_Log.log("Deleted Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
-				missing.add(key);
+			if (translator != null) {
+				TranslatorDatabaseManagement translated = translator.getTranslation(modelCode, key);
+				if (translated == null || translated.getTranslation() == null) {
+					missing.add(key);
+				} else if (redoTranslations) {
+					translated.delete(modelCode, key);
+					T_Log.log("Deleted Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
+					missing.add(key);
+				} else {
+					T_Log.log("Found Database Translation For Word/Phrase: " + modelCode + " : " + translated.getTranslation()); //$NON-NLS-1$ //$NON-NLS-2$
+					found.put(inputs.get(i), translated.getTranslation());
+				}
 			} else {
-				T_Log.log("Found Database Translation For Word/Phrase: " + modelCode + " : " + translated.getTranslation()); //$NON-NLS-1$ //$NON-NLS-2$
-				found.put(inputs.get(i), translated.getTranslation());
+				for (int s = 0; s < list.size(); s++) {
+					missing.add((list.get(s) instanceof String ? (String) list.get(s) : (list.get(s)).toString()));
+				}
 			}
 		}
 		return new tSearchResult<>(
@@ -2300,19 +2335,22 @@ public class Translator {
 		if (key.isBlank()) {
 			return null;
 		}
-		final TranslatorEntity translated = TranslatorEntity.getTranslation(modelCode, key);
-		if (translated == null || translated.getTranslation() == null) {
-			return null;
-		} else if (redoTranslations) {
-			T_Log.log("Deleted Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
-			TranslatorEntity.delete(modelCode, key);
-			return null;
+		TranslatorDatabaseManagement translator = getDatabaseManagement();
+		if (translator != null) {
+			TranslatorDatabaseManagement translated = translator.getTranslation(modelCode, key);
+			if (translated == null || translated.getTranslation() == null) {
+				return null;
+			} else if (redoTranslations) {
+				T_Log.log("Deleted Word/Phrase: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
+				translator.delete(modelCode, key);
+				return null;
+			}
+			T_Log.log("Found Database Translation For Word/Phrase: " + modelCode + " : " + translated.getTranslation()); //$NON-NLS-1$ //$NON-NLS-2$
+			return translated.getTranslation();
 		}
-		T_Log.log("Found Database Translation For Word/Phrase: " + modelCode + " : " + translated.getTranslation()); //$NON-NLS-1$ //$NON-NLS-2$
-		return translated.getTranslation();
+		return null;
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Private
 	/**
 	 * Translates a list of inputs using the specified translation model and
 	 * language pair.
@@ -2332,6 +2370,7 @@ public class Translator {
 	private static <T> Map<T, String> doAsList(final Locale langIN, final Locale langOUT, final String modelCode, final List<T> inputs, final boolean doTranslation) throws Exception {
 		final Map<T, String> results = new LinkedHashMap<>();
 		final List<List<T>> chunks = splitIntoChunks(inputs, modelCharLimit);
+		TranslatorDatabaseManagement translator = getDatabaseManagement();
 		for (final List<T> chunk : chunks) {
 			final List<T> chunkedList = chunk;
 			if (chunkedList.size() > 0) {
@@ -2355,7 +2394,9 @@ public class Translator {
 						String formatted = output;
 						results.putIfAbsent(inputs.get(i), formatted);
 						if (doTranslation) {
-							TranslatorEntity.save(modelCode, key, formatted);
+							if (translator != null) {
+								translator.save(modelCode, key, formatted);
+							}
 						}
 					}
 				}
@@ -2383,6 +2424,7 @@ public class Translator {
 	private static <T> Map<T, String> doAsStrings(final Locale langIN, final Locale langOUT, final String modelCode, final List<T> inputs, final boolean doTranslateion) throws Exception {
 		final Map<T, String> results = new LinkedHashMap<>();
 		final List<List<T>> chunks = splitIntoChunks(inputs, modelCharLimit);
+		TranslatorDatabaseManagement translator = getDatabaseManagement();
 		for (final List<T> chunk : chunks) {
 			final List<T> chunkedList = chunk;
 			if (chunkedList.size() > 0) {
@@ -2404,7 +2446,9 @@ public class Translator {
 						String formatted = translatedFromModel;
 						results.putIfAbsent(inputs.get(i), formatted);
 						if (doTranslateion) {
-							TranslatorEntity.save(modelCode, key, formatted);
+							if (translator != null) {
+								translator.save(modelCode, key, formatted);
+							}
 						}
 						T_Log.log("Translated Word/Phrase Output: " + modelCode + " : " + formatted); //$NON-NLS-1$ //$NON-NLS-2$
 					}
@@ -2449,7 +2493,10 @@ public class Translator {
 		if ((translatedFromModel != null) && !translatedFromModel.isBlank()) {
 			String formatted = translatedFromModel;
 			if (doTranslateion) {
-				TranslatorEntity.save(modelCode, key, formatted);
+				TranslatorDatabaseManagement translator = getDatabaseManagement();
+				if (translator != null) {
+					translator.save(modelCode, key, formatted);
+				}
 			}
 			T_Log.log("Translated Word/Phrase From Model: " + modelCode + " : " + formatted); //$NON-NLS-1$ //$NON-NLS-2$
 			return formatted;
@@ -2504,6 +2551,124 @@ public class Translator {
 			return (String) o;
 		}
 		return (o).toString();
+	}
+
+	/**
+	 * Helper class for detecting frameworks and databases.
+	 *
+	 */
+	public static class DetectionUtils {
+		// Simple Enums for type safety
+		public enum Framework {
+			HIBERNATE, MONGODB, MYBATIS, NONE
+		}
+
+		public enum Database {
+			MARIADB, MYSQL, POSTGRESQL, H2, NONE
+		}
+
+		// Map of Enum -> Marker Class Name
+		private static final Map<Framework, String> FRAMEWORK_MARKERS = new LinkedHashMap<>();
+		private static final Map<Database, String> DATABASE_MARKERS = new LinkedHashMap<>();
+		static {
+			FRAMEWORK_MARKERS.put(Framework.HIBERNATE, "org.hibernate.Session"); //$NON-NLS-1$
+			FRAMEWORK_MARKERS.put(Framework.MONGODB, "com.mongodb.client.MongoClient"); //$NON-NLS-1$
+			FRAMEWORK_MARKERS.put(Framework.MYBATIS, "org.apache.ibatis.session.SqlSession"); //$NON-NLS-1$
+			//
+			DATABASE_MARKERS.put(Database.MARIADB, "org.mariadb.jdbc.Driver"); //$NON-NLS-1$
+			DATABASE_MARKERS.put(Database.MYSQL, "com.mysql.cj.jdbc.Driver"); //$NON-NLS-1$
+			DATABASE_MARKERS.put(Database.POSTGRESQL, "org.postgresql.Driver"); //$NON-NLS-1$
+			DATABASE_MARKERS.put(Database.H2, "org.h2.Driver"); //$NON-NLS-1$
+		}
+
+		/**
+		 * Detects which management framework is present on the classpath.
+		 * 
+		 * @return Name of the framework (e.g., "Hibernate") or null
+		 */
+		public static Framework detectFramework() {
+			for (var entry : FRAMEWORK_MARKERS.entrySet()) {
+				if (isClassPresent(entry.getValue())) {
+					return entry.getKey();
+				}
+			}
+			return Framework.NONE;
+		}
+
+		/**
+		 * Detects which database driver is present on the classpath.
+		 * 
+		 * @return Name of the database (e.g., "MariaDB") or null
+		 */
+		public static Database detectDatabase() {
+			for (var entry : DATABASE_MARKERS.entrySet()) {
+				if (isClassPresent(entry.getValue())) {
+					return entry.getKey();
+				}
+			}
+			return Database.NONE;
+		}
+
+		/**
+		 * Helper method for detecting if class paths exist.
+		 * 
+		 * @return boolean representing if the class path exists, true or false
+		 */
+		private static boolean isClassPresent(String className) {
+			try {
+				Class.forName(className);
+				return true;
+			} catch (ClassNotFoundException e) {
+				T_Log.log("Class Detection Error", e); //$NON-NLS-1$
+				return false;
+			}
+		}
+	}
+
+	/**
+	 * Interface for framework entities.
+	 *
+	 */
+	public static interface TranslatorDatabaseManagement {
+		abstract void init(String database_framework_config_path);
+
+		abstract void setFrameworkObject(Object sessionFactory);
+
+		abstract void shutdown();
+
+		abstract void dropTable();
+
+		abstract HibernateTranslatorEntity setStringIN(final Object StringIN);
+
+		abstract HibernateTranslatorEntity setModelCode(final String ModelCode);
+
+		abstract HibernateTranslatorEntity setTranslation(final String StringOUT);
+
+		abstract String getTranslation();
+
+		abstract void save();
+
+		abstract void delete();
+
+		abstract HibernateTranslatorEntity getTranslation(final String id);
+
+		abstract HibernateTranslatorEntity getTranslation(final String modelCode, final Object input);
+
+		abstract void save(final String modelCode, final Object input, final String translatedString);
+
+		abstract void delete(final String id);
+
+		abstract void delete(final String modelCode, final Object input);
+
+		abstract void deleteDuplicateTranslations();
+
+		abstract void deleteUnusedTranslations();
+
+		abstract void deleteAllTranslations();
+
+		abstract boolean idExists(final String id);
+
+		abstract String generateUniqueID(final Class<?> entityClass);
 	}
 
 	/**
