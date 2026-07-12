@@ -70,71 +70,6 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	@SuppressWarnings("unused")
 	private Timestamp LastUsed;
 
-	public interface TranslatorEntityMapper {
-		@Select("SELECT * FROM MyBatisTranslatorEntity WHERE id = #{id}")
-		MyBatisTranslatorEntity getById(@Param("id") String id);
-
-		@Select("SELECT * FROM MyBatisTranslatorEntity WHERE ModelCode = #{modelCode} AND StringIN = #{stringIN}")
-		List<MyBatisTranslatorEntity> getByModelCodeAndStringIN(@Param("modelCode") String modelCode, @Param("stringIN") String stringIN);
-
-		@Insert("""
-				INSERT INTO MyBatisTranslatorEntity
-				    (id, version, StringIN, ModelCode, StringOUT, LastUsed)
-				VALUES
-				    (#{id}, 1, #{stringIN}, #{modelCode}, #{stringOUT}, #{lastUsed})
-				""")
-		@Options(useGeneratedKeys = true, keyProperty = "id")
-		void insert(MyBatisTranslatorEntity entity);
-
-		@Update("""
-				UPDATE MyBatisTranslatorEntity
-				SET
-				    version = version + 1,
-				    StringIN = #{stringIN},
-				    ModelCode = #{modelCode},
-				    StringOUT = #{stringOUT},
-				    LastUsed = #{lastUsed}
-				WHERE
-				    id = #{id}
-				    AND version = #{version}
-				""")
-		int update(MyBatisTranslatorEntity entity);
-
-		@Delete("""
-				DELETE FROM MyBatisTranslatorEntity
-				WHERE id = #{id}
-				  AND version = #{version}
-				""")
-		int delete(MyBatisTranslatorEntity entity);
-
-		@Select("SELECT COUNT(*) FROM MyBatisTranslatorEntity WHERE id = #{id}")
-		int countById(@Param("id") String id);
-
-		@Delete("""
-				DELETE FROM MyBatisTranslatorEntity
-				WHERE id IN (
-				    SELECT id FROM (
-				        SELECT id, ROW_NUMBER() OVER (
-				            PARTITION BY ModelCode, StringIN
-				            ORDER BY id DESC
-				        ) as rn
-				        FROM MyBatisTranslatorEntity
-				    ) t
-				    WHERE rn > 1
-				)
-				""")
-		int deleteDuplicates();
-
-		@Delete("DELETE FROM MyBatisTranslatorEntity WHERE LastUsed < #{cutoff}")
-		int deleteOlderThan(@Param("cutoff") Timestamp cutoff);
-
-		@Delete("DELETE FROM MyBatisTranslatorEntity")
-		int deleteAll();
-
-		@Delete("DROP TABLE IF EXISTS MyBatisTranslatorEntity")
-		void dropTable();
-	}
-
 	/// Instance Methods
 	/**
 	 * Default constructor required by MyBatis.
@@ -259,7 +194,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	public void save() {
 		if ((this.ModelCode != null) && (this.StringIN != null) && (this.StringOUT != null)) {
 			MyBatisUtil.executeInSessionWithRetry(sqlSession -> {
-				TranslatorEntityMapper mapper = sqlSession.getMapper(TranslatorEntityMapper.class);
+				MyBatisUtil.TranslatorEntityMapper mapper = sqlSession.getMapper(MyBatisUtil.TranslatorEntityMapper.class);
 				this.LastUsed = Translator.quickTimestamp.timestamp();
 				if (this.id == null) {
 					this.id = generateUniqueID(MyBatisTranslatorEntity.class);
@@ -288,7 +223,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	public void delete() {
 		if (this.id != null) {
 			MyBatisUtil.executeInSessionWithRetry(sqlSession -> {
-				TranslatorEntityMapper mapper = sqlSession.getMapper(TranslatorEntityMapper.class);
+				MyBatisUtil.TranslatorEntityMapper mapper = sqlSession.getMapper(MyBatisUtil.TranslatorEntityMapper.class);
 				mapper.delete(this);
 				sqlSession.commit();
 				T_Log.log("Entity Deleted"); //$NON-NLS-1$
@@ -310,7 +245,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	@Override
 	public MyBatisTranslatorEntity getTranslation(final String id) {
 		return MyBatisUtil.executeInSessionWithRetry(sqlSession -> {
-			TranslatorEntityMapper mapper = sqlSession.getMapper(TranslatorEntityMapper.class);
+			MyBatisUtil.TranslatorEntityMapper mapper = sqlSession.getMapper(MyBatisUtil.TranslatorEntityMapper.class);
 			MyBatisTranslatorEntity entity = mapper.getById(id);
 			if (entity != null) {
 				T_Log.log("Entity Found With id: " + id); //$NON-NLS-1$
@@ -330,7 +265,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	public MyBatisTranslatorEntity getTranslation(final String modelCode, final Object input) {
 		return MyBatisUtil.executeInSessionWithRetry(sqlSession -> {
 			if (input != null) {
-				TranslatorEntityMapper mapper = sqlSession.getMapper(TranslatorEntityMapper.class);
+				MyBatisUtil.TranslatorEntityMapper mapper = sqlSession.getMapper(MyBatisUtil.TranslatorEntityMapper.class);
 				String inputValue = (input instanceof String ? (String) input : input.toString());
 				List<MyBatisTranslatorEntity> result = mapper.getByModelCodeAndStringIN(modelCode, inputValue);
 				List<MyBatisTranslatorEntity> entitiesToRemove = new ArrayList<>();
@@ -385,7 +320,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	@Override
 	public void delete(final String id) {
 		MyBatisUtil.executeInSessionWithRetry(sqlSession -> {
-			TranslatorEntityMapper mapper = sqlSession.getMapper(TranslatorEntityMapper.class);
+			MyBatisUtil.TranslatorEntityMapper mapper = sqlSession.getMapper(MyBatisUtil.TranslatorEntityMapper.class);
 			MyBatisTranslatorEntity entity = mapper.getById(id);
 			if (entity != null) {
 				mapper.delete(entity);
@@ -408,7 +343,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	public void delete(final String modelCode, final Object input) {
 		MyBatisUtil.executeInSessionWithRetry(sqlSession -> {
 			if (input != null) {
-				TranslatorEntityMapper mapper = sqlSession.getMapper(TranslatorEntityMapper.class);
+				MyBatisUtil.TranslatorEntityMapper mapper = sqlSession.getMapper(MyBatisUtil.TranslatorEntityMapper.class);
 				String inputValue = (input instanceof String ? (String) input : input.toString());
 				List<MyBatisTranslatorEntity> result = mapper.getByModelCodeAndStringIN(modelCode, inputValue);
 				for (final MyBatisTranslatorEntity t : result) {
@@ -427,7 +362,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	@Override
 	public void deleteDuplicateTranslations() {
 		MyBatisUtil.executeInSessionWithRetry(sqlSession -> {
-			TranslatorEntityMapper mapper = sqlSession.getMapper(TranslatorEntityMapper.class);
+			MyBatisUtil.TranslatorEntityMapper mapper = sqlSession.getMapper(MyBatisUtil.TranslatorEntityMapper.class);
 			int deletedCount = mapper.deleteDuplicates();
 			sqlSession.commit();
 			T_Log.log("Deleted Duplicate Translations: " + deletedCount); //$NON-NLS-1$
@@ -442,7 +377,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	public void deleteUnusedTranslations() {
 		final Timestamp removeTime = Timestamp.from(Instant.now().minus(360, ChronoUnit.DAYS));
 		MyBatisUtil.executeInSessionWithRetry(sqlSession -> {
-			TranslatorEntityMapper mapper = sqlSession.getMapper(TranslatorEntityMapper.class);
+			MyBatisUtil.TranslatorEntityMapper mapper = sqlSession.getMapper(MyBatisUtil.TranslatorEntityMapper.class);
 			int deletedCount = mapper.deleteOlderThan(removeTime);
 			sqlSession.commit();
 			T_Log.log("Deleted Old Translations: " + deletedCount); //$NON-NLS-1$
@@ -456,7 +391,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	@Override
 	public void deleteAllTranslations() {
 		MyBatisUtil.executeInSessionWithRetry(sqlSession -> {
-			TranslatorEntityMapper mapper = sqlSession.getMapper(TranslatorEntityMapper.class);
+			MyBatisUtil.TranslatorEntityMapper mapper = sqlSession.getMapper(MyBatisUtil.TranslatorEntityMapper.class);
 			int deletedCount = mapper.deleteAll();
 			sqlSession.commit();
 			T_Log.log("Deleted All Translations: " + deletedCount); //$NON-NLS-1$
@@ -474,7 +409,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 	@Override
 	public boolean idExists(final String id) {
 		return MyBatisUtil.executeInSessionWithRetry(sqlSession -> {
-			TranslatorEntityMapper mapper = sqlSession.getMapper(TranslatorEntityMapper.class);
+			MyBatisUtil.TranslatorEntityMapper mapper = sqlSession.getMapper(MyBatisUtil.TranslatorEntityMapper.class);
 			int count = mapper.countById(id);
 			return Boolean.valueOf(count > 0);
 		}, 3).booleanValue();
@@ -541,6 +476,71 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 			private static DbDetails getDetails() {
 				return MAPPINGS.get(Translator.database);
 			}
+		}
+
+		public interface TranslatorEntityMapper {
+			@Select("SELECT * FROM MyBatisTranslatorEntity WHERE id = #{id}")
+			MyBatisTranslatorEntity getById(@Param("id") String id);
+
+			@Select("SELECT * FROM MyBatisTranslatorEntity WHERE ModelCode = #{modelCode} AND StringIN = #{stringIN}")
+			List<MyBatisTranslatorEntity> getByModelCodeAndStringIN(@Param("modelCode") String modelCode, @Param("stringIN") String stringIN);
+
+			@Insert("""
+					INSERT INTO MyBatisTranslatorEntity
+					    (id, version, StringIN, ModelCode, StringOUT, LastUsed)
+					VALUES
+					    (#{id}, 1, #{stringIN}, #{modelCode}, #{stringOUT}, #{lastUsed})
+					""")
+			@Options(useGeneratedKeys = true, keyProperty = "id")
+			void insert(MyBatisTranslatorEntity entity);
+
+			@Update("""
+					UPDATE MyBatisTranslatorEntity
+					SET
+					    version = version + 1,
+					    StringIN = #{stringIN},
+					    ModelCode = #{modelCode},
+					    StringOUT = #{stringOUT},
+					    LastUsed = #{lastUsed}
+					WHERE
+					    id = #{id}
+					    AND version = #{version}
+					""")
+			int update(MyBatisTranslatorEntity entity);
+
+			@Delete("""
+					DELETE FROM MyBatisTranslatorEntity
+					WHERE id = #{id}
+					  AND version = #{version}
+					""")
+			int delete(MyBatisTranslatorEntity entity);
+
+			@Select("SELECT COUNT(*) FROM MyBatisTranslatorEntity WHERE id = #{id}")
+			int countById(@Param("id") String id);
+
+			@Delete("""
+					DELETE FROM MyBatisTranslatorEntity
+					WHERE id IN (
+					    SELECT id FROM (
+					        SELECT id, ROW_NUMBER() OVER (
+					            PARTITION BY ModelCode, StringIN
+					            ORDER BY id DESC
+					        ) as rn
+					        FROM MyBatisTranslatorEntity
+					    ) t
+					    WHERE rn > 1
+					)
+					""")
+			int deleteDuplicates();
+
+			@Delete("DELETE FROM MyBatisTranslatorEntity WHERE LastUsed < #{cutoff}")
+			int deleteOlderThan(@Param("cutoff") Timestamp cutoff);
+
+			@Delete("DELETE FROM MyBatisTranslatorEntity")
+			int deleteAll();
+
+			@Delete("DROP TABLE IF EXISTS MyBatisTranslatorEntity")
+			void dropTable();
 		}
 
 		// Default config from jar resource paths
@@ -621,9 +621,7 @@ public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseMan
 		 * Shuts down all MyBatis session factories.
 		 */
 		private static synchronized void shutdown() {
-			// MyBatis doesn't require explicit shutdown like Hibernate
-			// The sessionFactory can be garbage collected
-			T_Log.log("MyBatis Session Factory shutdown"); //$NON-NLS-1$
+			T_Log.log("MyBatis Has shutdown"); //$NON-NLS-1$
 		}
 
 		/**
