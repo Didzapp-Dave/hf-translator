@@ -35,12 +35,14 @@ import didzapp.HF_Translator.Translator;
 import didzapp.HF_Translator.Translator.DetectionUtils.Database;
 import didzapp.HF_Translator.TranslatorContent.Translatable;
 import didzapp.HF_Translator.TranslatorResourcePaths.ToConfigFiles;
+import jakarta.persistence.Entity;
 import jakarta.persistence.OptimisticLockException;
 
 /**
  * Represents a translation entity stored in the database. This class maps to a
  * table in the database and handles persistence using MyBatis.
  */
+@Entity
 public class MyBatisTranslatorEntity implements Translator.TranslatorDatabaseManagement {
 	/// MyBatis Mapping
 	// Column names used for mapping to database columns
