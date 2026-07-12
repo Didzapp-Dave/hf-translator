@@ -63,6 +63,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import HibernateSupport.HibernateTranslatorEntity;
+import MongoDBSupport.MongoDBTranslatorEntity;
+import MyBatisSupport.MyBatisTranslatorEntity;
 import didzapp.T_Log;
 import didzapp.HF_Translator.TranslatorContent.FolderName;
 import didzapp.HF_Translator.TranslatorContent.Translatable;
@@ -634,6 +636,12 @@ public class Translator {
 	private static TranslatorDatabaseManagement getDatabaseManagement() {
 		if (framework.equals(DetectionUtils.Framework.HIBERNATE)) {
 			return new HibernateTranslatorEntity();
+		}
+		if (framework.equals(DetectionUtils.Framework.MONGODB)) {
+			return new MongoDBTranslatorEntity();
+		}
+		if (framework.equals(DetectionUtils.Framework.MYBATIS)) {
+			return new MyBatisTranslatorEntity();
 		}
 		return null;
 	}
