@@ -64,7 +64,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import HibernateSupport.HibernateTranslatorEntity;
 import MongoDBSupport.MongoDBTranslatorEntity;
-import MyBatisSupport.MyBatisTranslatorEntity;
 import didzapp.T_Log;
 import didzapp.HF_Translator.TranslatorContent.FolderName;
 import didzapp.HF_Translator.TranslatorContent.Translatable;
@@ -297,59 +296,56 @@ public class Translator {
 	 * languages, Hibernate configuration, model storage path, and content classes.
 	 * It prepares necessary resources for translation.
 	 *
-	 * @param frameworkObject                Object used to manage framework
-	 *                                       interactions
+	 * @param frameworkObject            Object used to manage framework
+	 *                                   interactions
 	 * 
-	 * @param database_framework_config_path Framework config file path
+	 * @param config_path_or_string      Framework config file path
 	 * 
-	 * @param default_language               Default language to be used (can be
-	 *                                       null: default (English))
+	 * @param default_language           Default language to be used (can be null:
+	 *                                   default (English))
 	 * 
-	 * @param language_selection             Array of supported languages; if null,
-	 *                                       all languages are used
+	 * @param language_selection         Array of supported languages; if null, all
+	 *                                   languages are used
 	 * 
-	 * @param run_language_detector          If true, the language detector model
-	 *                                       will remain in memory and accessable
-	 *                                       for faster detecting
+	 * @param run_language_detector      If true, the language detector model will
+	 *                                   remain in memory and accessable for faster
+	 *                                   detecting
 	 * 
-	 * @param universal_translation_mode     If true, the language detector model
-	 *                                       will remain in memory and accessable
-	 *                                       for faster detecting
+	 * @param universal_translation_mode If true, the language detector model will
+	 *                                   remain in memory and accessable for faster
+	 *                                   detecting
 	 * 
-	 * @param model_reset                    If true, re-downloads all model files,
-	 *                                       remakes models
+	 * @param model_reset                If true, re-downloads all model files,
+	 *                                   remakes models
 	 * 
-	 * @param translation_reset              If true, re-translates all content
+	 * @param translation_reset          If true, re-translates all content
 	 * 
-	 * @param feed_content                   If true, translates or checks
-	 *                                       availability for all content in
-	 *                                       contentClasses
+	 * @param feed_content               If true, translates or checks availability
+	 *                                   for all content in contentClasses
 	 * 
-	 * @param debugMode                      Enables detailed logging during
+	 * @param debugMode                  Enables detailed logging during
 	 * 
-	 * @param testingMode                    Enables test-specific logging or
-	 *                                       behavior
+	 * @param testingMode                Enables test-specific logging or behavior
 	 * 
-	 * @param showCriticalErrors             Whether critical errors should be
-	 *                                       logged when not debugging
+	 * @param showCriticalErrors         Whether critical errors should be logged
+	 *                                   when not debugging
 	 * 
-	 * @param showIgnoredErrors              Whether ignored errors should be logged
-	 *                                       when not debugging
+	 * @param showIgnoredErrors          Whether ignored errors should be logged
+	 *                                   when not debugging
 	 * 
-	 * @param siteOrAppIdentifier            Identifier for the current
-	 *                                       application/site
+	 * @param siteOrAppIdentifier        Identifier for the current application/site
 	 * 
-	 * @param platform                       Platform application is going to run on
+	 * @param platform                   Platform application is going to run on
 	 * 
-	 * @param doFullTranslatorTest           Full test on all translate methods, 3
-	 *                                       times over (uses 3 available languages,
-	 *                                       long wait time)
+	 * @param doFullTranslatorTest       Full test on all translate methods, 3 times
+	 *                                   over (uses 3 available languages, long wait
+	 *                                   time)
 	 * 
-	 * @param modelStoragePath               Directory where translation models are
-	 *                                       stored
+	 * @param modelStoragePath           Directory where translation models are
+	 *                                   stored
 	 * 
-	 * @param contentClasses                 Classes containing enums with
-	 *                                       translatable strings
+	 * @param contentClasses             Classes containing enums with translatable
+	 *                                   strings
 	 * 
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
@@ -375,10 +371,10 @@ public class Translator {
 				contentClasses);
 	}
 
-	public static boolean init(String database_framework_config_path, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(String config_path_or_string, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
 		return init(
 				null,
-				database_framework_config_path,
+				config_path_or_string,
 				default_language,
 				language_selection,
 				run_language_detector,
@@ -417,24 +413,26 @@ public class Translator {
 				contentClasses);
 	}
 
-	public static boolean init(Object framework_object, String database_framework_config_path, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(Object framework_object, String config_path_or_string, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
 		if (!runningMaintenance && framework == null) {
 			//
 			runningMaintenance = true;
 			//
+			T_Log.debug = debugMode;
+			T_Log.testing = testingMode;
+			T_Log.showCritical = showCriticalErrors;
+			T_Log.showIgnored = showIgnoredErrors;
+			//
 			framework = DetectionUtils.detectFramework();
 			database = DetectionUtils.detectDatabase();
 			if (framework_object == null) {
-				getDatabaseManagement().init(database_framework_config_path != null ? database_framework_config_path : null);
+				getDatabaseManagement().init(config_path_or_string != null ? config_path_or_string : null);
 			} else {
 				getDatabaseManagement().setFrameworkObject(framework_object);
 			}
 			//
 			universalTranslations = universal_translation_mode;
-			T_Log.debug = debugMode;
-			T_Log.testing = testingMode;
-			T_Log.showCritical = showCriticalErrors;
-			T_Log.showIgnored = showIgnoredErrors;
+			//
 			if (siteOrAppIdentifier != null) {
 				siteOrAppId = siteOrAppIdentifier;
 			}
@@ -639,9 +637,6 @@ public class Translator {
 		}
 		if (framework.equals(DetectionUtils.Framework.MONGODB)) {
 			return new MongoDBTranslatorEntity();
-		}
-		if (framework.equals(DetectionUtils.Framework.MYBATIS)) {
-			return new MyBatisTranslatorEntity();
 		}
 		return null;
 	}
@@ -2597,6 +2592,7 @@ public class Translator {
 		public static Framework detectFramework() {
 			for (var entry : FRAMEWORK_MARKERS.entrySet()) {
 				if (isClassPresent(entry.getValue())) {
+					T_Log.log("Detected: " + entry.getKey()); //$NON-NLS-1$
 					return entry.getKey();
 				}
 			}
@@ -2611,6 +2607,7 @@ public class Translator {
 		public static Database detectDatabase() {
 			for (var entry : DATABASE_MARKERS.entrySet()) {
 				if (isClassPresent(entry.getValue())) {
+					T_Log.log("Detected: " + entry.getKey()); //$NON-NLS-1$
 					return entry.getKey();
 				}
 			}
@@ -2627,7 +2624,7 @@ public class Translator {
 				Class.forName(className);
 				return true;
 			} catch (ClassNotFoundException e) {
-				T_Log.log("Class Detection Error", e); //$NON-NLS-1$
+				T_Log.log("Class Detection Error", e, true); //$NON-NLS-1$
 				return false;
 			}
 		}
@@ -2638,7 +2635,7 @@ public class Translator {
 	 *
 	 */
 	public static interface TranslatorDatabaseManagement {
-		abstract void init(String database_framework_config_path);
+		abstract void init(String config_path_or_string);
 
 		abstract void setFrameworkObject(Object sessionFactory);
 

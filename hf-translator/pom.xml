@@ -56,20 +56,10 @@
 		<!-- PROVIDED SCOPE (Borrowed from parent)                      -->
 		<!-- ========================================================== -->
 
-		<!-- Hibernate ORM - MANDATORY UPGRADE for Java 23 compatibility -->
 		<dependency>
 			<groupId>org.hibernate.orm</groupId>
 			<artifactId>hibernate-core</artifactId>
 			<version>6.6.2.Final</version>
-			<scope>provided</scope>
-			<optional>true</optional>
-			<!-- WARNING: This drops Java 8/11 parent support entirely. -->
-		</dependency>
-
-		<dependency>
-			<groupId>org.mybatis</groupId>
-			<artifactId>mybatis</artifactId>
-			<version>3.5.19</version>
 			<scope>provided</scope>
 			<optional>true</optional>
 		</dependency>
@@ -78,14 +68,6 @@
 			<groupId>org.mongodb</groupId>
 			<artifactId>mongodb-driver-sync</artifactId>
 			<version>5.8.0</version>
-			<scope>provided</scope>
-			<optional>true</optional>
-		</dependency>
-
-		<dependency>
-			<groupId>org.mongodb</groupId>
-			<artifactId>mongodb-driver-sync</artifactId>
-			<version>5.6.0</version>
 			<scope>provided</scope>
 			<optional>true</optional>
 		</dependency>

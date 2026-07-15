@@ -85,7 +85,8 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	/**
 	 * Constructor with all fields.
 	 */
-	public HibernateTranslatorEntity(String stringIn, String modelCode, String stringOut) {
+	@SuppressWarnings("unused")
+	private HibernateTranslatorEntity(String stringIn, String modelCode, String stringOut) {
 		this.StringIN = stringIn;
 		this.ModelCode = modelCode;
 		this.StringOUT = stringOut;
@@ -201,7 +202,12 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 			HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 				this.LastUsed = Translator.quickTimestamp.timestamp();
 				if (this.id == null) {
-					this.id = generateUniqueID(HibernateTranslatorEntity.class);
+					HibernateTranslatorEntity existing = getTranslation(this.ModelCode, this.StringIN);
+					if (existing != null) {
+						this.id = existing.id;
+					} else {
+						this.id = generateUniqueID(HibernateTranslatorEntity.class);
+					}
 					hibernateSession.persist(this);
 				} else {
 					hibernateSession.merge(this);
@@ -489,7 +495,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 		// Default config from jar resource paths
 		private static String cfg = ToConfigFiles.libhibernate;
 		// Session factory used to create sessions
-		private static SessionFactory sessionFactory;
+		private static SessionFactory sessionFactory = null;
 		// Secure random instance for generating unique IDs
 		private static final SecureRandom secureRandom = new SecureRandom();
 
@@ -511,8 +517,8 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 		 */
 		private static synchronized void initSessionFactory(String configPathOrString) {
 			if (sessionFactory == null) {
+				T_Log.log("Initializing Hibernate Session Factory"); //$NON-NLS-1$
 				try {
-					T_Log.log("Initializing Hibernate Session Factory: " + HibernateTranslatorEntity.class.getSimpleName()); //$NON-NLS-1$
 					final Configuration configuration = new Configuration();
 					// 1. Detect config file and apply to configuration
 					if (configPathOrString != null) {

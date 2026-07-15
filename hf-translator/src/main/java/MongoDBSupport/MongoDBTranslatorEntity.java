@@ -23,16 +23,11 @@ import didzapp.T_Log;
 import didzapp.HF_Translator.Translator;
 import didzapp.HF_Translator.Translator.TranslatorDatabaseManagement;
 import didzapp.HF_Translator.TranslatorContent.Translatable;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.OptimisticLockException;
-import jakarta.persistence.Version;
 
 /**
  * Represents a translation entity stored in MongoDB. This class maps to a
  * collection in the database and handles persistence using MongoDB Java Driver.
  */
-@Entity
 public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 	// Collection name used for storing translation entities
 	protected static final String COLLECTION_NAME = "translations"; //$NON-NLS-1$
@@ -46,10 +41,8 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 	protected static final String Field_LastUsed = "LastUsed"; //$NON-NLS-1$
 	// Document Fields
 	// Primary key field
-	@Id
 	private String id;
 	// Version field for optimistic locking
-	@Version
 	private int version;
 	// Input string to be translated or looked for
 	private String StringIN;
@@ -70,7 +63,7 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 	/**
 	 * Constructor with all fields.
 	 */
-	public MongoDBTranslatorEntity(String id, int version, String stringIn, String modelCode, String stringOut) {
+	private MongoDBTranslatorEntity(String id, int version, String stringIn, String modelCode, String stringOut) {
 		this.id = id;
 		this.version = version;
 		this.StringIN = stringIn;
@@ -194,7 +187,12 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 						.append(Field_StringOUT, this.StringOUT)
 						.append(Field_LastUsed, this.LastUsed);
 				if (this.id == null) {
-					this.id = generateUniqueID(MongoDBTranslatorEntity.class);
+					MongoDBTranslatorEntity existing = getTranslation(this.ModelCode, this.StringIN);
+					if (existing != null) {
+						this.id = existing.id;
+					} else {
+						this.id = generateUniqueID(MongoDBTranslatorEntity.class);
+					}
 					this.version = 0;
 					document.append(Field_id, this.id);
 					document.append(Field_version, Integer.valueOf(this.version));
@@ -207,7 +205,7 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 							Filters.and(Filters.eq(Field_id, this.id), Filters.eq(Field_version, Integer.valueOf(oldVersion))),
 							document);
 					if (result.getMatchedCount() == 0) {
-						throw new OptimisticLockException(
+						throw new MongoDBUtil.OptimisticLockingException(
 								"Document was modified by another process. Expected version: " + oldVersion); //$NON-NLS-1$
 					}
 				}
@@ -480,7 +478,7 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 	private static MongoDBTranslatorEntity documentToEntity(Document doc) {
 		return new MongoDBTranslatorEntity(
 				doc.getString(Field_id),
-				Integer.valueOf(doc.getString(Field_version)).intValue(),
+				doc.getInteger(Field_version).intValue(),
 				doc.getString(Field_StringIN),
 				doc.getString(Field_Model_Code),
 				doc.getString(Field_StringOUT));
@@ -492,7 +490,7 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 		// Database name
 		private static final String DATABASE_NAME = "hf-translator"; //$NON-NLS-1$
 		// Mongo client used to connect to the database
-		private static MongoClient mongoClient;
+		private static MongoClient mongoClient = null;
 		// Secure random instance for generating unique IDs
 		private static final SecureRandom secureRandom = new SecureRandom();
 
@@ -514,11 +512,11 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 		 */
 		private static synchronized void initMongoClient(String configPathOrString) {
 			if (mongoClient == null) {
+				T_Log.log("Initializing MongoDB Client"); //$NON-NLS-1$
 				try {
 					if (configPathOrString != null) {
 						connectionString = configPathOrString;
 					}
-					T_Log.log("Initializing MongoDB Client"); //$NON-NLS-1$
 					mongoClient = MongoClients.create(connectionString);
 					T_Log.log("Initialized successfully."); //$NON-NLS-1$
 				} catch (Exception e) {
@@ -566,8 +564,8 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 					MongoDatabase database = mongoClient.getDatabase(DATABASE_NAME);
 					return action.apply(database);
 				} catch (final Exception e) {
-					if (e instanceof OptimisticLockException) {
-						retryCount++;
+					retryCount++;
+					if (e instanceof OptimisticLockingException) {
 						if (retryCount > maxRetries) {
 							T_Log.log("Max Retries Reached for Optimistic Locking: ", e); //$NON-NLS-1$
 							throw e;
@@ -582,7 +580,6 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 						}
 						continue; // Retry the operation
 					}
-					retryCount++;
 					if (retryCount > maxRetries) {
 						T_Log.log(
 								"Max Retries Reached For Optimistic Lock Conflict: ", //$NON-NLS-1$
@@ -606,6 +603,30 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 			}
 			throw new IllegalStateException(
 					"Operation Failed After Retries Attempted"); //$NON-NLS-1$
+		}
+
+		private static class OptimisticLockingException extends RuntimeException {
+			private static final long serialVersionUID = 1L;
+
+			private OptimisticLockingException() {
+				super();
+			}
+
+			private OptimisticLockingException(final String message) {
+				super(
+						message);
+			}
+
+			private OptimisticLockingException(final String message, final Throwable cause) {
+				super(
+						message,
+						cause);
+			}
+
+			private OptimisticLockingException(final Throwable cause) {
+				super(
+						cause);
+			}
 		}
 	}
 }

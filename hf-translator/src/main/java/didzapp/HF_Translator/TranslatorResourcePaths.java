@@ -115,7 +115,6 @@ public class TranslatorResourcePaths {
 	public static class ToConfigFiles {
 		public static final String configPath = "/"; //$NON-NLS-1$
 		public static final String libhibernate = "/libhibernate.cfg.xml"; //$NON-NLS-1$
-		public static final String libmybatis = "/libmybatis.cfg.xml"; //$NON-NLS-1$
 				public static final String logback = "/logback.xml"; //$NON-NLS-1$
 
 	}
