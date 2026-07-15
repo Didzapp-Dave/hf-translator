@@ -1,7 +1,7 @@
 How to use 'hf-translator' 
 
 
-hibernate database default creds : 
+Hibernate database default creds : 
 
 user - hf-translator
 
@@ -12,41 +12,55 @@ database name - hf-translator
 tables create themselves
 
 
+Mongo database default creds : 
+
+connection string  - mongodb://localhost:27017
+
+database name - hf-translator
+
+tables create themselves
+
+
+hf-translator will auto-detect MongoDB framework and its companion database 
+
+or 
+
+Hibernate framework combined with these databases: MariaDB, MySQL, PostgreSQL, H2
+
+
 
 Step 1 :  Init the Translator (returns a boolean)
 
 
 if (Translator.init(
+
+framework_object, (Object)                                   (OPTIONAL: Your own database management object, SessionFactory or MongoClient) 
 					
-libhiberbernate_CFG_XML_Path,                                (Your custom CFG file path : from main application) (optional) 
+config_path_or_string, (String)                              (OPTIONAL: Your custom configuration file path or connection string) 
 					
-Language.ENGLISH,                                            (OPTIONAL: Default language  /  null = English by default)
+default_language, (Locale.forLanguageTag("en"))              (OPTIONAL: Default language  /  null = English by default)
 					
-new Language[] {},                                           (OPTIONAL: Array[] of selected languages or Language.usableValues() for all*  /  null = all* by default)
+language_selection, (List<Locale>)                           (OPTIONAL: List<Locale> of selected languages or Language.usableValues() for all*  /  null = all* by default)
 					
-("true" or "false"),                                         (If true: run language detector as service(faster). If false: it runs and turns off)
+run_language_detector, ("true" or "false")                   (If true: run language detector as service(faster). If false: it runs and turns off)
 					
-("true" or "false"),                                         (If true: support translations between all languages. If false: only translate between supported languages and default)
+universal_translation_mode, ("true" or "false")              (If true: support translations between all languages. If false: only translate between supported languages and default)
 					
-("true" or "false"),                                         (Re-download models and re-translate content on startup)
+model_reset, ("true" or "false")                             (Re-download models at startup)
+
+translation_reset, ("true" or "false")                       (Re-translate content at startup)
+
+feed_content, ("true" or "false")                            (Feed content to database at startup)
 					
-Translator.Platform.WINDOWS(or LINUX),                       (Platform main application is running on)
+platform, (Translator.Platform.WINDOWS / LINUX)              (Platform main application is running on)
 					
-("true" or "false"),                                         (Perform full translator live test, iterates through each translation method in all settings for each language)
+application_id, ("true" or "false")                          (Site/Application identifier: for application specific folder naming)
 					
-("true" or "false"),                                         (Debug Mode: shows logging in terminal)
-					
-("true" or "false"),                                         (Testing Mode: for when testing)
-					
-("true" or "false"),                                         (Shows serious errors, even when not in debug mode)
-					
-("true" or "false"),                                         (Shows ignored/expected errors, for details you wouldn't usually want in the terminal)
-					
-("true" or "false"),                                         (Site/Application identifier: for application specific folders)
-					
-"path/to/chosen/dir",                                        (OPTIONAL: User defined path to stor translation/detection models)
-					
-classes)) {(Array[] of class files containing Translatable objects)
+model_storage_path, ("path/to/chosen/dir")                   (NULLABLE: User defined path to stor translation/detection models)
+                                                        	 (NULLABLE: DEFAULT for WINDOWS: System.getProperty("user.home") + "\\AppData\\Local\\didzappsoftware\\")
+															 (NULLABLE: DEFAULT for LINUX: System.getProperty("user.home") + "/.local/share/didzappsoftware/")
+
+content_classes... (Class<?>[])                              (Class<?>[] of class files containing Translatable Objects, Enums or Strings)
 
 } else {
 	throw new Exception("Translator Failed Initiation"); 
