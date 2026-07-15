@@ -42,7 +42,7 @@ public class TranslatorResourcePaths {
 		 * @param font The full path to the font file (e.g., "/fonts/arial.ttf")
 		 * @return The font name without the extension and directory (e.g., "arial")
 		 */
-		public static String getFontName(String font) {
+		public static String getFontName(final String font) {
 			return font.split("/")[1].split("\\.")[0]; //$NON-NLS-1$ //$NON-NLS-2$
 		}
 
@@ -52,14 +52,14 @@ public class TranslatorResourcePaths {
 		 * @return An array of strings representing the names of all font files
 		 */
 		public static String[] getAllFontFiles() {
-			List<String> fontFiles = new ArrayList<>();
-			Field[] fields = ToFontFiles.class.getDeclaredFields();
-			for (Field field : fields) {
+			final List<String> fontFiles = new ArrayList<>();
+			final Field[] fields = ToFontFiles.class.getDeclaredFields();
+			for (final Field field : fields) {
 				if (Modifier.isStatic(field.getModifiers()) && Modifier.isFinal(field.getModifiers())
 						&& field.getType().equals(String.class)) {
 					try {
 						fontFiles.add(((String) field.get(null)).split("/")[1]); //$NON-NLS-1$
-					} catch (IllegalAccessException e) {
+					} catch (final IllegalAccessException e) {
 						T_Log.log("Font Collection Error", e); //$NON-NLS-1$
 					}
 				}
@@ -115,7 +115,7 @@ public class TranslatorResourcePaths {
 	public static class ToConfigFiles {
 		public static final String configPath = "/"; //$NON-NLS-1$
 		public static final String libhibernate = "/libhibernate.cfg.xml"; //$NON-NLS-1$
-				public static final String logback = "/logback.xml"; //$NON-NLS-1$
+		public static final String logback = "/logback.xml"; //$NON-NLS-1$
 
 	}
 
@@ -131,7 +131,7 @@ public class TranslatorResourcePaths {
 		 *                 translation (e.g., Language.ENGLISH, Language.FRENCH)
 		 * @return The full path to the language JS file (e.g., "flatpickr/en.js")
 		 */
-		public static final String languageRecources(Locale locale) {
+		public static final String languageRecources(final Locale locale) {
 			return "/flatpickr/" + locale.getLanguage() + ".js"; //$NON-NLS-1$ //$NON-NLS-2$
 		}
 

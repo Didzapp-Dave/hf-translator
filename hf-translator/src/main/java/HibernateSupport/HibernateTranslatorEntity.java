@@ -86,7 +86,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	 * Constructor with all fields.
 	 */
 	@SuppressWarnings("unused")
-	private HibernateTranslatorEntity(String stringIn, String modelCode, String stringOut) {
+	private HibernateTranslatorEntity(final String stringIn, final String modelCode, final String stringOut) {
 		this.StringIN = stringIn;
 		this.ModelCode = modelCode;
 		this.StringOUT = stringOut;
@@ -96,7 +96,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	 * Initiator for Hibernate Implementation.
 	 */
 	@Override
-	public void init(String configPathOrString) {
+	public void init(final String configPathOrString) {
 		HibernateUtil.initSessionFactory(configPathOrString);
 	}
 
@@ -104,7 +104,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	 * Initiator bypass for Hibernate Implementation.
 	 */
 	@Override
-	public void setFrameworkObject(Object object) {
+	public void setFrameworkObject(final Object object) {
 		if (object instanceof SessionFactory) {
 			HibernateUtil.setSessionFactory((SessionFactory) object);
 			return;
@@ -150,7 +150,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	 */
 	@Override
 	public HibernateTranslatorEntity setStringIN(final Object StringIN) {
-		if (StringIN instanceof String || StringIN instanceof Translatable) {
+		if ((StringIN instanceof String) || (StringIN instanceof Translatable)) {
 			this.StringIN = (StringIN instanceof String ? (String) StringIN : StringIN.toString());
 			return this;
 		}
@@ -202,11 +202,11 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 			HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 				this.LastUsed = Translator.quickTimestamp.timestamp();
 				if (this.id == null) {
-					HibernateTranslatorEntity existing = getTranslation(this.ModelCode, this.StringIN);
+					final HibernateTranslatorEntity existing = this.getTranslation(this.ModelCode, this.StringIN);
 					if (existing != null) {
 						this.id = existing.id;
 					} else {
-						this.id = generateUniqueID(HibernateTranslatorEntity.class);
+						this.id = this.generateUniqueID(HibernateTranslatorEntity.class);
 					}
 					hibernateSession.persist(this);
 				} else {
@@ -270,9 +270,9 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 				final CriteriaQuery<HibernateTranslatorEntity> cq = cb.createQuery(HibernateTranslatorEntity.class);
 				final Root<HibernateTranslatorEntity> root = cq.from(HibernateTranslatorEntity.class);
 				cq.select(root)
-						.where(
-								cb.equal(root.get(Column_modleCode), modelCode),
-								cb.equal(root.get(Column_StringIN), (isString ? (String) input : input.toString())));
+				.where(
+						cb.equal(root.get(Column_modleCode), modelCode),
+						cb.equal(root.get(Column_StringIN), (isString ? (String) input : input.toString())));
 				final List<HibernateTranslatorEntity> result = hibernateSession.createQuery(cq).getResultList();
 				final List<HibernateTranslatorEntity> entitiesToRemove = new ArrayList<>();
 				HibernateTranslatorEntity lastValidEntity = null;
@@ -309,9 +309,9 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	@Override
 	public void save(final String modelCode, final Object input, final String translatedString) {
 		new HibernateTranslatorEntity().setModelCode(modelCode)
-				.setStringIN((input instanceof String ? (String) input : input.toString()))
-				.setTranslation(translatedString)
-				.save();
+		.setStringIN((input instanceof String ? (String) input : input.toString()))
+		.setTranslation(translatedString)
+		.save();
 		T_Log.log("Translation Added To Database"); //$NON-NLS-1$
 	}
 
@@ -351,9 +351,9 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 				final CriteriaQuery<HibernateTranslatorEntity> cq = cb.createQuery(HibernateTranslatorEntity.class);
 				final Root<HibernateTranslatorEntity> root = cq.from(HibernateTranslatorEntity.class);
 				cq.select(root)
-						.where(
-								cb.equal(root.get(Column_modleCode), modelCode),
-								cb.equal(root.get(Column_StringIN), (isString ? (String) input : input.toString())));
+				.where(
+						cb.equal(root.get(Column_modleCode), modelCode),
+						cb.equal(root.get(Column_StringIN), (isString ? (String) input : input.toString())));
 				final List<HibernateTranslatorEntity> result = hibernateSession.createQuery(cq).getResultList();
 				for (final HibernateTranslatorEntity t : result) {
 					hibernateSession.remove(t);
@@ -372,7 +372,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 			final String hql = "DELETE FROM " + HibernateTranslatorEntity.class.getSimpleName() //$NON-NLS-1$
 					+ " e " + "WHERE e." + Column_id + " NOT IN (" + "   SELECT MAX(e2." + Column_id + ") " + "   FROM " + HibernateTranslatorEntity.class //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
-							.getSimpleName() + " e2 " + "   GROUP BY e2." + Column_modleCode + ", e2." + Column_StringIN + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+					.getSimpleName() + " e2 " + "   GROUP BY e2." + Column_modleCode + ", e2." + Column_StringIN + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			final int deletedCount = query.executeUpdate();
 			T_Log.log("Deleted Duplicate Translations: " + deletedCount); //$NON-NLS-1$
@@ -451,7 +451,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 				sb.append(randomChar);
 			}
 			newId = sb.toString();
-		} while (idExists(newId));
+		} while (this.idExists(newId));
 		return newId;
 	}
 
@@ -503,11 +503,10 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 		 * Sets the Hibernate session factory.
 		 *
 		 */
-		private static synchronized void setSessionFactory(SessionFactory newSessionFactory) {
+		private static synchronized void setSessionFactory(final SessionFactory newSessionFactory) {
 			if (sessionFactory == null) {
 				sessionFactory = newSessionFactory;
 			}
-			return;
 		}
 
 		/**
@@ -515,7 +514,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 		 *
 		 * @param configPathOrString Path to config file
 		 */
-		private static synchronized void initSessionFactory(String configPathOrString) {
+		private static synchronized void initSessionFactory(final String configPathOrString) {
 			if (sessionFactory == null) {
 				T_Log.log("Initializing Hibernate Session Factory"); //$NON-NLS-1$
 				try {
@@ -528,7 +527,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 						configuration.configure(cfg);
 					}
 					// 2. Get the correct Dialect and Driver strings for that DB
-					HibernateConfigMapper.DbDetails details = HibernateConfigMapper.getDetails();
+					final HibernateConfigMapper.DbDetails details = HibernateConfigMapper.getDetails();
 					// 3. Programmatically configure Hibernate
 					configuration.setProperty("hibernate.dialect", details.dialect()); //$NON-NLS-1$
 					configuration.setProperty("hibernate.connection.driver_class", details.driver()); //$NON-NLS-1$
@@ -543,7 +542,6 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 					return;
 				}
 			}
-			return;
 		}
 
 		/**
@@ -570,16 +568,16 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 			try {
 				boolean driverFound = false;
 				Driver targetDriver = null;
-				Enumeration<Driver> drivers = DriverManager.getDrivers();
+				final Enumeration<Driver> drivers = DriverManager.getDrivers();
 				while (drivers.hasMoreElements()) {
-					Driver d = drivers.nextElement();
+					final Driver d = drivers.nextElement();
 					if (d.acceptsURL("jdbc:mariadb://")) { //$NON-NLS-1$
 						driverFound = true;
 						targetDriver = d;
 						break;
 					}
 				}
-				if (driverFound && targetDriver != null) {
+				if (driverFound && (targetDriver != null)) {
 					final ClassLoader cl = Thread.currentThread().getContextClassLoader();
 					if (targetDriver.getClass().getClassLoader() == cl) {
 						DriverManager.deregisterDriver(targetDriver);
@@ -590,7 +588,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 				} else {
 					T_Log.log("MariaDB Driver Not Found – Nothing To Deregister"); //$NON-NLS-1$
 				}
-			} catch (Exception e) {
+			} catch (final Exception e) {
 				T_Log.log("Unexpected Error While Checking/Deregistering MariaDB Driver", e); //$NON-NLS-1$
 			}
 		}
