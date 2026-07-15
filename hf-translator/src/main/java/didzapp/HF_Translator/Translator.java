@@ -407,11 +407,6 @@ public class Translator {
 			//
 			runningMaintenance = true;
 			//
-			T_Log.debug = false;
-			T_Log.testing = false;
-			T_Log.showCritical = false;
-			T_Log.showIgnored = false;
-			//
 			framework = DetectionUtils.detectFramework();
 			database = DetectionUtils.detectDatabase();
 			if (framework_object == null) {
