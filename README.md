@@ -77,7 +77,7 @@ from:  Language enum representing the language being translated from
 
 to:  Language enum representing the language being translated to
 
-input:  String or any object implementing Translator.Translatable (objects must @override .toString() to return value intended for translation)
+input:  String or any object implementing Translator.Translatable (Objects must @override .toString() to return value intended for translation)
 
 recreateTableEntry:  ("true" or "false") : overwrites database entry
 
@@ -129,9 +129,9 @@ public static class TranslateStacker
 
 2E.a. Setters / Add content
 
-public void setReCreate(boolean reCreate)
+public void setReCreate(final boolean reCreate)
 
-public void setProcessAsList(boolean doAsList)
+public void setProcessAsList(final boolean doAsList)
 
 public TranslateStacker add(final String text)
 
