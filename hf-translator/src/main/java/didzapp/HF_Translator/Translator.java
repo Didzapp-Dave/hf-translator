@@ -322,7 +322,7 @@ public class Translator {
 	 * @param translation_reset          If true, re-translates all content
 	 * 
 	 * @param feed_content               If true, translates or checks availability
-	 *                                   for all content in contentClasses
+	 *                                   for all content in content_classes
 	 * 
 	 * @param debugMode                  Enables detailed logging during
 	 * 
@@ -334,7 +334,7 @@ public class Translator {
 	 * @param showIgnoredErrors          Whether ignored errors should be logged
 	 *                                   when not debugging
 	 * 
-	 * @param siteOrAppIdentifier        Identifier for the current application/site
+	 * @param application_id             Identifier for the current application/site
 	 * 
 	 * @param platform                   Platform application is going to run on
 	 * 
@@ -342,16 +342,16 @@ public class Translator {
 	 *                                   over (uses 3 available languages, long wait
 	 *                                   time)
 	 * 
-	 * @param modelStoragePath           Directory where translation models are
+	 * @param model_storage_path         Directory where translation models are
 	 *                                   stored
 	 * 
-	 * @param contentClasses             Classes containing enums with translatable
+	 * @param content_classes            Classes containing enums with translatable
 	 *                                   strings
 	 * 
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
 	 */
-	public static boolean init(Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, String application_id, String model_storage_path, Class<?>... content_classes) {
 		return init(
 				null,
 				null,
@@ -363,16 +363,12 @@ public class Translator {
 				translation_reset,
 				feed_content,
 				platform,
-				debugMode,
-				testingMode,
-				showCriticalErrors,
-				showIgnoredErrors,
-				siteOrAppIdentifier,
-				modelStoragePath,
-				contentClasses);
+				application_id,
+				model_storage_path,
+				content_classes);
 	}
 
-	public static boolean init(String config_path_or_string, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(String config_path_or_string, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, String application_id, String model_storage_path, Class<?>... content_classes) {
 		return init(
 				null,
 				config_path_or_string,
@@ -384,16 +380,12 @@ public class Translator {
 				translation_reset,
 				feed_content,
 				platform,
-				debugMode,
-				testingMode,
-				showCriticalErrors,
-				showIgnoredErrors,
-				siteOrAppIdentifier,
-				modelStoragePath,
-				contentClasses);
+				application_id,
+				model_storage_path,
+				content_classes);
 	}
 
-	public static boolean init(Object framework_object, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(Object framework_object, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, String application_id, String model_storage_path, Class<?>... content_classes) {
 		return init(
 				framework_object,
 				null,
@@ -405,24 +397,20 @@ public class Translator {
 				translation_reset,
 				feed_content,
 				platform,
-				debugMode,
-				testingMode,
-				showCriticalErrors,
-				showIgnoredErrors,
-				siteOrAppIdentifier,
-				modelStoragePath,
-				contentClasses);
+				application_id,
+				model_storage_path,
+				content_classes);
 	}
 
-	public static boolean init(Object framework_object, String config_path_or_string, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, boolean debugMode, boolean testingMode, boolean showCriticalErrors, boolean showIgnoredErrors, String siteOrAppIdentifier, String modelStoragePath, Class<?>... contentClasses) {
+	public static boolean init(Object framework_object, String config_path_or_string, Locale default_language, List<Locale> language_selection, boolean run_language_detector, boolean universal_translation_mode, boolean model_reset, boolean translation_reset, boolean feed_content, Platform platform, String application_id, String model_storage_path, Class<?>... content_classes) {
 		if (!runningMaintenance && framework == null) {
 			//
 			runningMaintenance = true;
 			//
-			T_Log.debug = debugMode;
-			T_Log.testing = testingMode;
-			T_Log.showCritical = showCriticalErrors;
-			T_Log.showIgnored = showIgnoredErrors;
+			T_Log.debug = false;
+			T_Log.testing = false;
+			T_Log.showCritical = false;
+			T_Log.showIgnored = false;
 			//
 			framework = DetectionUtils.detectFramework();
 			database = DetectionUtils.detectDatabase();
@@ -434,14 +422,14 @@ public class Translator {
 			//
 			universalTranslations = universal_translation_mode;
 			//
-			if (siteOrAppIdentifier != null) {
-				siteOrAppId = siteOrAppIdentifier;
+			if (application_id != null) {
+				siteOrAppId = application_id;
 			}
 			if (platform != null) {
 				platformRuningOn = platform;
 			}
-			if (modelStoragePath != null) {
-				modelPath = modelStoragePath;
+			if (model_storage_path != null) {
+				modelPath = model_storage_path;
 			} else {
 				if (platformRuningOn == Platform.WINDOWS) {
 					modelPath = System.getProperty("user.home") + "\\AppData\\Local\\didzappsoftware\\"; //$NON-NLS-1$ //$NON-NLS-2$
@@ -497,8 +485,8 @@ public class Translator {
 			//
 			if (feed_content && framework_object != null && database != null) {
 				final TranslateStacker translateStacker = new TranslateStacker();
-				if (contentClasses != null && contentClasses.length > 0) {
-					for (Class<?> clazz : contentClasses) {
+				if (content_classes != null && content_classes.length > 0) {
+					for (Class<?> clazz : content_classes) {
 						for (final Field field : clazz.getDeclaredFields()) {
 							if (field.getType() == String.class) {
 								try {
