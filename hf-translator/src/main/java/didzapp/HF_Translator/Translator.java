@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Field;
 import java.net.JarURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -498,6 +499,15 @@ public class Translator {
 				final TranslateStacker translateStacker = new TranslateStacker();
 				if (contentClasses != null && contentClasses.length > 0) {
 					for (Class<?> clazz : contentClasses) {
+						for (final Field field : clazz.getDeclaredFields()) {
+							if (field.getType() == String.class) {
+								try {
+									translateStacker.add((String) field.get(null));
+								} catch (Exception e) {
+									T_Log.log("Error While Determining If Object Is A String", e, true); //$NON-NLS-1$
+								}
+							}
+						}
 						for (final Class<?> nested : clazz.getDeclaredClasses()) {
 							if (nested.isEnum() && Translatable.class.isAssignableFrom(nested)) {
 								final Translatable[] enumValues = (Translatable[]) nested.getEnumConstants();
@@ -509,7 +519,7 @@ public class Translator {
 										translateStacker.add(translatable);
 									}
 								} catch (Exception e) {
-									T_Log.log("Error While Determining If Object Is Translatable", e); //$NON-NLS-1$
+									T_Log.log("Error While Determining If Object Is Translatable", e, true); //$NON-NLS-1$
 								}
 							}
 						}

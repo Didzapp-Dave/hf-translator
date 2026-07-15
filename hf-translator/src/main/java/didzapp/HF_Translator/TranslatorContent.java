@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * used for translation purposes.
  */
 public class TranslatorContent {
-	public static final class untranslated {
+	public static final class translatedStrings {
 		/**
 		 * A static nested class that holds untranslated string constants.
 		 */
