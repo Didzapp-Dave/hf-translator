@@ -13,7 +13,7 @@ Message : any message
 
 Exception : any Exception
 
-Ignored : If ignored is true, Exception and message will not show in logs UNLESS debug and showIgnored are both true
+Ignored : If ignored is true, exception and message will not show in logs UNLESS debug and showIgnored are both true
 
 Settings:
 
