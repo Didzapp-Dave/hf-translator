@@ -1,6 +1,26 @@
 How to use 'hf-translator' 
 
 
+Built-in static logging for testing and development purposes, usable by the developer
+
+Example:
+
+T_Log.log("Message Goes Here", exception (Optional), ignored (Optional : "true" or "false"));
+
+Message : any message
+
+Exception : any Exception
+
+Ignored : If ignored is true, Exception and message will not show in logs UNLESS debug and showIgnored are both true
+
+Settings:
+
+T_Log.debug =  ("true" or "false") (Default: false)                                   (Shows log messages and exceptions in terminal) 
+T_Log.testing =  ("true" or "false") (Default: false)                                 (If debug is true, synchronizes logs, causes bottle-kneck, keeps logs readable) 
+T_Log.showCritical =  ("true" or "false") (Default: false)                            (If debug is false, shows unecpected exceptions in logs) 
+T_Log.showIgnored =  ("true" or "false") (Default: false)                             (If debug is true, shows expected exceptions in logs) 
+
+
 Hibernate database default creds : 
 
 user - hf-translator
