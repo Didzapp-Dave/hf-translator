@@ -16,8 +16,11 @@ Ignored : If ignored is true, Exception and message will not show in logs UNLESS
 Settings:
 
 T_Log.debug =  ("true" or "false") (Default: false)                                   (Shows log messages and exceptions in terminal) 
+
 T_Log.testing =  ("true" or "false") (Default: false)                                 (If debug is true, synchronizes logs, causes bottle-kneck, keeps logs readable) 
-T_Log.showCritical =  ("true" or "false") (Default: false)                            (If debug is false, shows unecpected exceptions in logs) 
+
+T_Log.showCritical =  ("true" or "false") (Default: false)                            (If debug is false, shows unecpected exceptions in logs)
+
 T_Log.showIgnored =  ("true" or "false") (Default: false)                             (If debug is true, shows expected exceptions in logs) 
 
 
