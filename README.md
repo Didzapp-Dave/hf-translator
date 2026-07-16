@@ -1,6 +1,8 @@
 How to use 'hf-translator' 
 
 
+
+
 Built-in static logging for testing and development purposes, usable by the developer
 
 Example:
@@ -24,6 +26,8 @@ T_Log.showCritical =  ("true" or "false") (Default: false)                      
 T_Log.showIgnored =  ("true" or "false") (Default: false)                             (If debug is true, shows expected exceptions in logs) 
 
 
+
+
 Hibernate database default creds : 
 
 user - hf-translator
@@ -44,6 +48,8 @@ database name - hf-translator
 tables create themselves
 
 
+
+
 hf-translator will auto-detect MongoDB framework and its companion database 
 
 or 
@@ -52,7 +58,10 @@ Hibernate framework combined with these databases: MariaDB, MySQL, PostgreSQL, H
 
 
 
+
+
 Step 1 :  Init the Translator (returns a boolean)
+
 
 
 if (Translator.init(
@@ -91,7 +100,10 @@ content_classes... (Class<?>[])                              (Class<?>[] of clas
 
 
 
+
+
 Step 2 :  Use the Translator / detector (supported and selected languages only)
+
 
 
 2A. Methods Paramaters
@@ -107,7 +119,9 @@ recreateTableEntry:  ("true" or "false") : overwrites database entry
 doAsList:  ("true" or "false") : process the whole list of strings in the model at once, or call the model once per string (very slow)
 
 
+
 2B. Singular Text/Translatable objects
+
 
 
 public static Language detectLanguage(final String input)
@@ -119,7 +133,9 @@ public static String translate(final Language from, final Language to, final Obj
 public static String translate(final Language from, final Language to, final Object input, final boolean recreateTableEntry)
 
 
+
 2C. Lists of texts/Translatable objects
+
 
 
 public static <T> Map<T, String> translate(final Language to, final List<T> inputs)
@@ -133,7 +149,9 @@ public static <T> Map<T, String> translate(final Language from, final Language t
 public static <T> Map<T, String> translate(final Language from, final Language to, final List<T> inputs, final boolean doAsList, final boolean recreateTableEntrys)
 
 
-2D. Singular and Lists of texts/Translatable objects (Model Only - No Database Lookup)  
+
+2D. Singular and Lists of texts/Translatable objects (Model Only - No Database Lookup) 
+
 
 
 public static String translate_OnlyUseModel(final Language to, final Object input)
@@ -145,7 +163,9 @@ public static <T> Map<T, String> translate_OnlyUseModel(final Language to, final
 public static <T> Map<T, String> translate_OnlyUseModel(final Language from, final Language to, final List<T> inputs, final boolean doAsList)
 
 
+
 2E. Multiple Lists of texts/Translatable objects and single texts combined (same usage as the static methods, the boolean params are now setter methods)  
+
 
   
 public static class TranslateStacker
@@ -184,7 +204,10 @@ public void feedTranslatorDatabase()
 
 
 
+
+
 Step 3 :  Shutdown when your done .....  thats it ! ENJOY!     Thanks for looking at my project    :)
+
 
 
 Translator.shutdown();
