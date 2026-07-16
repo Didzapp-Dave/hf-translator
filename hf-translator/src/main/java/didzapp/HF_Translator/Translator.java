@@ -408,11 +408,15 @@ public class Translator {
 			runningMaintenance = true;
 			//
 			framework = DetectionUtils.detectFramework();
-			database = DetectionUtils.detectDatabase();
-			if (framework_object == null) {
-				getDatabaseManagement().init(config_path_or_string != null ? config_path_or_string : null);
-			} else {
-				getDatabaseManagement().setFrameworkObject(framework_object);
+			if (!framework.equals(DetectionUtils.Framework.NONE)) {
+				database = DetectionUtils.detectDatabase();
+			}
+			if (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE)) {
+				if (framework_object == null) {
+					getDatabaseManagement().init(config_path_or_string != null ? config_path_or_string : null);
+				} else {
+					getDatabaseManagement().setFrameworkObject(framework_object);
+				}
 			}
 			//
 			universalTranslations = universal_translation_mode;
@@ -464,17 +468,19 @@ public class Translator {
 			}
 			//
 			//
-			if (translation_reset) {
-				getDatabaseManagement().deleteAllTranslations();
-			} else {
-				getDatabaseManagement().deleteUnusedTranslations();
-				getDatabaseManagement().deleteDuplicateTranslations();
+			if (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE)) {
+				if (translation_reset) {
+					getDatabaseManagement().deleteAllTranslations();
+				} else {
+					getDatabaseManagement().deleteUnusedTranslations();
+					getDatabaseManagement().deleteDuplicateTranslations();
+				}
 			}
 			downloadFilesAndCreateModels(model_reset, defaultLanguage, true);
 			//
 			runningMaintenance = false;
 			//
-			if (feed_content && (framework_object != null) && (database != null)) {
+			if (feed_content && (framework_object != null) && (!database.equals(DetectionUtils.Database.NONE))) {
 				final TranslateStacker translateStacker = new TranslateStacker();
 				if ((content_classes != null) && (content_classes.length > 0)) {
 					for (final Class<?> clazz : content_classes) {
@@ -554,8 +560,10 @@ public class Translator {
 			//
 			runningMaintenance = true;
 			//
-			getDatabaseManagement().deleteUnusedTranslations();
-			getDatabaseManagement().deleteDuplicateTranslations();
+			if (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE)) {
+				getDatabaseManagement().deleteUnusedTranslations();
+				getDatabaseManagement().deleteDuplicateTranslations();
+			}
 			//
 			downloadFilesAndCreateModels(model_reset, defaultLanguage, true);
 			//
@@ -597,7 +605,7 @@ public class Translator {
 		if (toTranslate) {
 			return Paths.get(
 					languageModelFolder
-					.getPath() + "/opus-mt-" + finalLangIN + "-" + finaLangOUT + "/" + ToPyFiles.generatedModelFolder); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+							.getPath() + "/opus-mt-" + finalLangIN + "-" + finaLangOUT + "/" + ToPyFiles.generatedModelFolder); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 		}
 		return Paths.get(languageModelFolder.getPath() + "/opus-mt-" + finalLangIN + "-" + finaLangOUT); //$NON-NLS-1$ //$NON-NLS-2$
 	}
@@ -724,7 +732,7 @@ public class Translator {
 				if (!modelDir.toFile().exists()) {
 					T_Log.log(
 							"No Model File Found, Searching For Languages That Translate To " + langOUT //$NON-NLS-1$
-							.getDisplayName(defaultLanguage));
+									.getDisplayName(defaultLanguage));
 					final BridgeContainer bridge = bridgeLanguages(langIN, langOUT, input);
 					if (bridge != null) {
 						finalInput = bridge.input;
@@ -788,7 +796,7 @@ public class Translator {
 					return Collections.emptyList();
 				}
 				return new ObjectMapper().readValue(output.toString(), new TypeReference<List<String>>() {
-				/* null */});
+					/* null */});
 			}
 			return Collections.emptyList();
 		} catch (final Exception e) {
@@ -830,19 +838,19 @@ public class Translator {
 			for (final String langBridgeCode : languagesLinks.get(langIN.getLanguage())) {
 				T_Log.log(
 						"Checking Compatablity For: " + Locale.forLanguageTag(langBridgeCode) //$NON-NLS-1$
-						.getDisplayName(defaultLanguage) + " To " + langOUT //$NON-NLS-1$
-						.getDisplayName(defaultLanguage));
+								.getDisplayName(defaultLanguage) + " To " + langOUT //$NON-NLS-1$
+										.getDisplayName(defaultLanguage));
 				if ((languagesLinks.get(langBridgeCode) == null)
 						|| !languagesLinks.get(langBridgeCode).contains(langOUT.getLanguage())) {
 					T_Log.log(
 							Locale.forLanguageTag(langBridgeCode)
-							.getDisplayName(defaultLanguage) + " Is Not Compatable With " + langOUT //$NON-NLS-1$
-							.getDisplayName(defaultLanguage));
+									.getDisplayName(defaultLanguage) + " Is Not Compatable With " + langOUT //$NON-NLS-1$
+											.getDisplayName(defaultLanguage));
 					continue;
 				}
 				T_Log.log(
 						Locale.forLanguageTag(langBridgeCode).getDisplayName(defaultLanguage) + " Is Compatable With " + langOUT //$NON-NLS-1$
-						.getDisplayName(defaultLanguage));
+								.getDisplayName(defaultLanguage));
 				final Path modelDir = getModelDir(true, langIN, Locale.forLanguageTag(langBridgeCode));
 				if (modelDir.toFile().exists()) {
 					if ((input != null) && !input.isBlank()) {
@@ -895,7 +903,7 @@ public class Translator {
 						}
 						final String jsonInput = new ObjectMapper().writeValueAsString(
 								new ObjectMapper().readValue(output.toString(), new TypeReference<List<String>>() {
-								/* null */}));
+									/* null */}));
 						final String encoded = Base64.getEncoder().encodeToString(jsonInput.getBytes(StandardCharsets.UTF_8));
 						return new BridgeContainer(
 								Locale.forLanguageTag(langBridgeCode),
@@ -1146,7 +1154,7 @@ public class Translator {
 					|| !scriptFileTranslate.exists()
 					|| !sha512(Files.readString(scriptFileGenerate.toPath(), StandardCharsets.UTF_8)).equals(hashFileGenerate)
 					|| !sha512(Files.readString(scriptFileTranslate.toPath(), StandardCharsets.UTF_8))
-					.equals(hashFileTranslate)) {
+							.equals(hashFileTranslate)) {
 				scriptFileGenerate = Extract.ToFileSystem.fromClassPathContext(
 						HibernateTranslatorEntity.class,
 						languageModelFolder.getTempPath(),
@@ -1164,11 +1172,11 @@ public class Translator {
 				scriptFileDetectLanguage = Extract.ToFileSystem.fromClassPathContext(
 						HibernateTranslatorEntity.class,
 						Extract.ToFileSystem
-						.fromClassPathContext(
-								HibernateTranslatorEntity.class,
-								languageModelFolder.getPath(),
-								ToPyFiles.conLID_Folder)
-						.getAbsolutePath(),
+								.fromClassPathContext(
+										HibernateTranslatorEntity.class,
+										languageModelFolder.getPath(),
+										ToPyFiles.conLID_Folder)
+								.getAbsolutePath(),
 						ToPyFiles.conLIDPY,
 						ToPyFiles.conLIDPYName,
 						ToPyFiles.pythonSuffix);
@@ -1373,7 +1381,7 @@ public class Translator {
 						if (!Files.exists(modelBin)) {
 							T_Log.log(
 									"Download Failed For " + lang + "-" + lang2 + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-									.toAbsolutePath(),
+											.toAbsolutePath(),
 									e);
 							if (delete_Folder(modelDir)) {
 								T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
@@ -1383,7 +1391,7 @@ public class Translator {
 						} else {
 							T_Log.log(
 									"Download Failed For " + lang2 + "-" + lang + ". Model Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-									.toAbsolutePath(),
+											.toAbsolutePath(),
 									e);
 						}
 					}
@@ -1413,7 +1421,7 @@ public class Translator {
 							if (!Files.exists(modelBin)) {
 								T_Log.log(
 										"Download Failed For " + lang2 + "-" + lang + ". No Models Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-										.toAbsolutePath(),
+												.toAbsolutePath(),
 										e);
 								if (delete_Folder(modelDir)) {
 									T_Log.log("Model Folder Deleted"); //$NON-NLS-1$
@@ -1423,7 +1431,7 @@ public class Translator {
 							} else {
 								T_Log.log(
 										"Download Failed For " + lang2 + "-" + lang + ". Model Stored At: " + modelDir //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-										.toAbsolutePath(),
+												.toAbsolutePath(),
 										e);
 							}
 						}
@@ -1733,10 +1741,10 @@ public class Translator {
 		public <T> Map<T, String> translate(final Locale from, final Locale to) {
 			final Map<T, String> results = (Map<T, String>) Translator.translate(
 					from != null ? from : defaultLanguage,
-							to,
-							this.getCombinedList(),
-							this.doAsList,
-							this.redoTranslationsInTableStacker);
+					to,
+					this.getCombinedList(),
+					this.doAsList,
+					this.redoTranslationsInTableStacker);
 			return results;
 		}
 
@@ -1804,10 +1812,10 @@ public class Translator {
 			Map<T, String> result = new LinkedHashMap<>();
 			result = (Map<T, String>) Translator.translate(
 					from != null ? from : defaultLanguage,
-							to,
-							this.getCombinedList(),
-							this.doAsList,
-							this.redoTranslationsInTableStacker);
+					to,
+					this.getCombinedList(),
+					this.doAsList,
+					this.redoTranslationsInTableStacker);
 			new Thread(
 					() -> {
 						T_Log.log("Feeding Translator In New Thread"); //$NON-NLS-1$
@@ -1815,10 +1823,10 @@ public class Translator {
 							if ((!l.equals(getDefaultSystemLanguage()) && (!l.equals(to)))) {
 								Translator.translate(
 										from != null ? from : defaultLanguage,
-												l,
-												this.getCombinedList(),
-												this.doAsList,
-												this.redoTranslationsInTableStacker);
+										l,
+										this.getCombinedList(),
+										this.doAsList,
+										this.redoTranslationsInTableStacker);
 							}
 						}
 						T_Log.log("Finished Feeding Translator, Thread Terminated"); //$NON-NLS-1$
