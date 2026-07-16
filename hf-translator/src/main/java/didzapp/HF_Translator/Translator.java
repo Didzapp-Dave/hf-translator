@@ -411,7 +411,8 @@ public class Translator {
 			if (!framework.equals(DetectionUtils.Framework.NONE)) {
 				database = DetectionUtils.detectDatabase();
 			}
-			if (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE)) {
+			if (framework.equals(DetectionUtils.Framework.MONGODB)
+					|| (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE))) {
 				if (framework_object == null) {
 					getDatabaseManagement().init(config_path_or_string != null ? config_path_or_string : null);
 				} else {
@@ -468,7 +469,8 @@ public class Translator {
 			}
 			//
 			//
-			if (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE)) {
+			if (framework.equals(DetectionUtils.Framework.MONGODB)
+					|| (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE))) {
 				if (translation_reset) {
 					getDatabaseManagement().deleteAllTranslations();
 				} else {
@@ -480,7 +482,8 @@ public class Translator {
 			//
 			runningMaintenance = false;
 			//
-			if (feed_content && (framework_object != null) && (!database.equals(DetectionUtils.Database.NONE))) {
+			if (feed_content && (framework.equals(DetectionUtils.Framework.MONGODB)
+					|| (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE)))) {
 				final TranslateStacker translateStacker = new TranslateStacker();
 				if ((content_classes != null) && (content_classes.length > 0)) {
 					for (final Class<?> clazz : content_classes) {
@@ -560,7 +563,8 @@ public class Translator {
 			//
 			runningMaintenance = true;
 			//
-			if (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE)) {
+			if (framework.equals(DetectionUtils.Framework.MONGODB)
+					|| (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE))) {
 				getDatabaseManagement().deleteUnusedTranslations();
 				getDatabaseManagement().deleteDuplicateTranslations();
 			}
