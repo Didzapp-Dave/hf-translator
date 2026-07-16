@@ -85,11 +85,10 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	/**
 	 * Constructor with all fields.
 	 */
-	@SuppressWarnings("unused")
-	private HibernateTranslatorEntity(final String stringIn, final String modelCode, final String stringOut) {
+	public HibernateTranslatorEntity(final String stringIn, final String modelCode, final String translation) {
 		this.StringIN = stringIn;
 		this.ModelCode = modelCode;
-		this.StringOUT = stringOut;
+		this.StringOUT = translation;
 	}
 
 	/**
@@ -270,9 +269,9 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 				final CriteriaQuery<HibernateTranslatorEntity> cq = cb.createQuery(HibernateTranslatorEntity.class);
 				final Root<HibernateTranslatorEntity> root = cq.from(HibernateTranslatorEntity.class);
 				cq.select(root)
-				.where(
-						cb.equal(root.get(Column_modleCode), modelCode),
-						cb.equal(root.get(Column_StringIN), (isString ? (String) input : input.toString())));
+						.where(
+								cb.equal(root.get(Column_modleCode), modelCode),
+								cb.equal(root.get(Column_StringIN), (isString ? (String) input : input.toString())));
 				final List<HibernateTranslatorEntity> result = hibernateSession.createQuery(cq).getResultList();
 				final List<HibernateTranslatorEntity> entitiesToRemove = new ArrayList<>();
 				HibernateTranslatorEntity lastValidEntity = null;
@@ -309,9 +308,9 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 	@Override
 	public void save(final String modelCode, final Object input, final String translatedString) {
 		new HibernateTranslatorEntity().setModelCode(modelCode)
-		.setStringIN((input instanceof String ? (String) input : input.toString()))
-		.setTranslation(translatedString)
-		.save();
+				.setStringIN((input instanceof String ? (String) input : input.toString()))
+				.setTranslation(translatedString)
+				.save();
 		T_Log.log("Translation Added To Database"); //$NON-NLS-1$
 	}
 
@@ -351,9 +350,9 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 				final CriteriaQuery<HibernateTranslatorEntity> cq = cb.createQuery(HibernateTranslatorEntity.class);
 				final Root<HibernateTranslatorEntity> root = cq.from(HibernateTranslatorEntity.class);
 				cq.select(root)
-				.where(
-						cb.equal(root.get(Column_modleCode), modelCode),
-						cb.equal(root.get(Column_StringIN), (isString ? (String) input : input.toString())));
+						.where(
+								cb.equal(root.get(Column_modleCode), modelCode),
+								cb.equal(root.get(Column_StringIN), (isString ? (String) input : input.toString())));
 				final List<HibernateTranslatorEntity> result = hibernateSession.createQuery(cq).getResultList();
 				for (final HibernateTranslatorEntity t : result) {
 					hibernateSession.remove(t);
@@ -372,7 +371,7 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 		HibernateUtil.createSessionAndExecuteTransactionWithRetry(hibernateSession -> {
 			final String hql = "DELETE FROM " + HibernateTranslatorEntity.class.getSimpleName() //$NON-NLS-1$
 					+ " e " + "WHERE e." + Column_id + " NOT IN (" + "   SELECT MAX(e2." + Column_id + ") " + "   FROM " + HibernateTranslatorEntity.class //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
-					.getSimpleName() + " e2 " + "   GROUP BY e2." + Column_modleCode + ", e2." + Column_StringIN + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+							.getSimpleName() + " e2 " + "   GROUP BY e2." + Column_modleCode + ", e2." + Column_StringIN + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 			final MutationQuery query = hibernateSession.createMutationQuery(hql);
 			final int deletedCount = query.executeUpdate();
 			T_Log.log("Deleted Duplicate Translations: " + deletedCount); //$NON-NLS-1$

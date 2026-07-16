@@ -63,12 +63,17 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 	/**
 	 * Constructor with all fields.
 	 */
-	private MongoDBTranslatorEntity(final String id, final int version, final String stringIn, final String modelCode, final String stringOut) {
+	public MongoDBTranslatorEntity(
+			final String id,
+			final int version,
+			final String stringIn,
+			final String modelCode,
+			final String translation) {
 		this.id = id;
 		this.version = version;
 		this.StringIN = stringIn;
 		this.ModelCode = modelCode;
-		this.StringOUT = stringOut;
+		this.StringOUT = translation;
 	}
 
 	/**
@@ -325,9 +330,9 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 	@Override
 	public void save(final String modelCode, final Object input, final String translatedString) {
 		new MongoDBTranslatorEntity().setModelCode(modelCode)
-		.setStringIN((input instanceof String ? (String) input : input.toString()))
-		.setTranslation(translatedString)
-		.save();
+				.setStringIN((input instanceof String ? (String) input : input.toString()))
+				.setTranslation(translatedString)
+				.save();
 		T_Log.log("Translation Added To Database"); //$NON-NLS-1$
 	}
 
