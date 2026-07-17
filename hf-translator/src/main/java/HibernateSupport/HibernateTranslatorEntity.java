@@ -204,8 +204,10 @@ public class HibernateTranslatorEntity implements TranslatorDatabaseManagement {
 					final HibernateTranslatorEntity existing = this.getTranslation(this.ModelCode, this.StringIN);
 					if (existing != null) {
 						this.id = existing.id;
+						this.version = existing.version;
 					} else {
 						this.id = this.generateUniqueID(HibernateTranslatorEntity.class);
+						this.version = 0;
 					}
 					hibernateSession.persist(this);
 				} else {

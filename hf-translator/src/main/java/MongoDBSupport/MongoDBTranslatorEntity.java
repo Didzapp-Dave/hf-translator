@@ -63,7 +63,7 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 	/**
 	 * Constructor with all fields.
 	 */
-	public MongoDBTranslatorEntity(
+	private MongoDBTranslatorEntity(
 			final String id,
 			final int version,
 			final String stringIn,
@@ -71,6 +71,15 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 			final String translation) {
 		this.id = id;
 		this.version = version;
+		this.StringIN = stringIn;
+		this.ModelCode = modelCode;
+		this.StringOUT = translation;
+	}
+
+	/**
+	 * Public Constructor with all fields.
+	 */
+	public MongoDBTranslatorEntity(final String stringIn, final String modelCode, final String translation) {
 		this.StringIN = stringIn;
 		this.ModelCode = modelCode;
 		this.StringOUT = translation;
@@ -195,10 +204,11 @@ public class MongoDBTranslatorEntity implements TranslatorDatabaseManagement {
 					final MongoDBTranslatorEntity existing = this.getTranslation(this.ModelCode, this.StringIN);
 					if (existing != null) {
 						this.id = existing.id;
+						this.version = existing.version;
 					} else {
 						this.id = this.generateUniqueID(MongoDBTranslatorEntity.class);
+						this.version = 0;
 					}
-					this.version = 0;
 					document.append(Field_id, this.id);
 					document.append(Field_version, Integer.valueOf(this.version));
 					collection.insertOne(document);
