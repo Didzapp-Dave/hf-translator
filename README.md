@@ -38,6 +38,11 @@ database name - hf-translator
 
 tables create themselves
 
+Public HibernateTranslatorEntity(final String stringIn, final String modelCode, final String translation)
+
+Public HibernateTranslatorEntity()
+
+
 
 Mongo database default creds : 
 
@@ -46,6 +51,10 @@ connection string  - mongodb://localhost:27017
 database name - hf-translator
 
 tables create themselves
+
+Public MongoDBTranslatorEntity(final String stringIn, final String modelCode, final String translation)
+
+Public MongoDBTranslatorEntity()
 
 
 
@@ -88,9 +97,9 @@ platform, (Translator.Platform.WINDOWS / LINUX)              (Platform main appl
 					
 application_id, ("true" or "false")                          (Site/Application identifier: for application specific folder naming)
 					
-model_storage_path, ("path/to/chosen/dir")                   (NULLABLE: User defined path to stor translation/detection models)
-                                                        	 (NULLABLE: DEFAULT for WINDOWS: System.getProperty("user.home") + "\\AppData\\Local\\didzappsoftware\\")
-															 (NULLABLE: DEFAULT for LINUX: System.getProperty("user.home") + "/.local/share/didzappsoftware/")
+model_storage_path, ("path/to/chosen/dir")                   (NULLABLE: User defined path to store translation/detection models)
+                                                        	 (DEFAULT for WINDOWS: System.getProperty("user.home") + "\\AppData\\Local\\didzappsoftware\\")
+															 (DEFAULT for LINUX: System.getProperty("user.home") + "/.local/share/didzappsoftware/")
 
 content_classes... (Class<?>[])                              (Class<?>[] of class files containing Translatable Objects, Enums or Strings)
 
