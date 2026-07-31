@@ -1,5 +1,7 @@
 How to use 'hf-translator' 
 
+Requires Python and required dependencies are installed automatically (C2Translate)
+
 
 
 
