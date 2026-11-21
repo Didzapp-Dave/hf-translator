@@ -1,4 +1,4 @@
-package didzapp.HF_Translator;
+package didzapp.hf_translator;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -66,10 +66,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import HibernateSupport.HibernateTranslatorEntity;
 import MongoDBSupport.MongoDBTranslatorEntity;
 import didzapp.T_Log;
-import didzapp.HF_Translator.TranslatorContent.FolderName;
-import didzapp.HF_Translator.TranslatorContent.Translatable;
-import didzapp.HF_Translator.TranslatorResourcePaths.ToFlatpickr;
-import didzapp.HF_Translator.TranslatorResourcePaths.ToPyFiles;
+import didzapp.hf_translator.TranslatorContent.FolderName;
+import didzapp.hf_translator.TranslatorContent.Translatable;
+import didzapp.hf_translator.TranslatorResourcePaths.ToFlatpickr;
+import didzapp.hf_translator.TranslatorResourcePaths.ToPyFiles;
 
 public class Translator {
 	// Python file locations and hash values

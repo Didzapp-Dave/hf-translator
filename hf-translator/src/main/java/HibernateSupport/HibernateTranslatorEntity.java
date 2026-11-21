@@ -25,11 +25,11 @@ import org.hibernate.query.MutationQuery;
 import org.hibernate.query.Query;
 
 import didzapp.T_Log;
-import didzapp.HF_Translator.Translator;
-import didzapp.HF_Translator.Translator.DetectionUtils.Database;
-import didzapp.HF_Translator.Translator.TranslatorDatabaseManagement;
-import didzapp.HF_Translator.TranslatorContent.Translatable;
-import didzapp.HF_Translator.TranslatorResourcePaths.ToConfigFiles;
+import didzapp.hf_translator.Translator;
+import didzapp.hf_translator.Translator.DetectionUtils.Database;
+import didzapp.hf_translator.Translator.TranslatorDatabaseManagement;
+import didzapp.hf_translator.TranslatorContent.Translatable;
+import didzapp.hf_translator.TranslatorResourcePaths.ToConfigFiles;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

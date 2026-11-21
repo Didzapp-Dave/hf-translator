@@ -20,9 +20,9 @@ import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
 import didzapp.T_Log;
-import didzapp.HF_Translator.Translator;
-import didzapp.HF_Translator.Translator.TranslatorDatabaseManagement;
-import didzapp.HF_Translator.TranslatorContent.Translatable;
+import didzapp.hf_translator.Translator;
+import didzapp.hf_translator.Translator.TranslatorDatabaseManagement;
+import didzapp.hf_translator.TranslatorContent.Translatable;
 
 /**
  * Represents a translation entity stored in MongoDB. This class maps to a

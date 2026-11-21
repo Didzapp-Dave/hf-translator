@@ -10,8 +10,6 @@ import java.util.Locale;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import didzapp.HF_Translator.Translator;
-
 /**
  * Unit test for Translator library. Modern JUnit 5 test class - runs on Java 23
  * without any legacy baggage.

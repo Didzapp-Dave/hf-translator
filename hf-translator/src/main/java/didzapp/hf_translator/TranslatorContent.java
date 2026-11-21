@@ -1,4 +1,4 @@
-package didzapp.HF_Translator;
+package didzapp.hf_translator;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 

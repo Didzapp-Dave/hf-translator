@@ -1,4 +1,4 @@
-package didzapp.HF_Translator;
+package didzapp.hf_translator;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -116,7 +116,6 @@ public class TranslatorResourcePaths {
 		public static final String configPath = "/"; //$NON-NLS-1$
 		public static final String libhibernate = "/libhibernate.cfg.xml"; //$NON-NLS-1$
 		public static final String logback = "/logback.xml"; //$NON-NLS-1$
-
 	}
 
 	/**
