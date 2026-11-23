@@ -65,6 +65,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import HibernateSupport.HibernateTranslatorEntity;
 import MongoDBSupport.MongoDBTranslatorEntity;
+import didzapp.HostMemoryManagemant.TaskHandle;
 import didzapp.T_Log;
 import didzapp.hf_translator.TranslatorContent.FolderName;
 import didzapp.hf_translator.TranslatorContent.Translatable;
@@ -99,7 +100,6 @@ public class Translator {
 	static String mainPathString = null;
 	static final String tempPathString = "/temp_files"; //$NON-NLS-1$
 	static String siteOrAppId = "hf-translator"; //$NON-NLS-1$
-	static Platform platformRuningOn = null;
 	//
 	// Config, maintenance and global settings
 	static boolean runningMaintenance = false;
@@ -107,6 +107,7 @@ public class Translator {
 	static boolean universalTranslations = false;
 	public static DetectionUtils.Framework framework = null;
 	public static DetectionUtils.Database database = null;
+	public static Platform platformRuningOn = null;
 	//
 	//
 	// Values
@@ -715,7 +716,7 @@ public class Translator {
 	 * @param input   Text to translate
 	 * @return List of translated texts or empty list on error
 	 */
-	private static List<String> runCTranslate2(final Locale langIN, final Locale langOUT, final String input) {
+	private static List<String> runCTranslate2(TaskHandle taskHandler, final Locale langIN, final Locale langOUT, final String input) {
 		try {
 			exportPYFiles();
 			String hashString = sha512(Files.readString(scriptFileTranslate.toPath(), StandardCharsets.UTF_8));
