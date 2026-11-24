@@ -352,8 +352,9 @@ public class Translator {
 	 * @return Returns true after successfully completing initialization steps,
 	 *         false otherwise
 	 */
-	public static boolean init(final Locale default_language, final List<Locale> language_selection, final boolean run_language_detector, final boolean universal_translation_mode, final boolean model_reset, final boolean translation_reset, final boolean feed_content, final Platform platform, final String application_id, final String model_storage_path, final Class<?>... content_classes) {
+	public static boolean init(TaskHandle taskHandle, final Locale default_language, final List<Locale> language_selection, final boolean run_language_detector, final boolean universal_translation_mode, final boolean model_reset, final boolean translation_reset, final boolean feed_content, final Platform platform, final String application_id, final String model_storage_path, final Class<?>... content_classes) {
 		return init(
+				taskHandle,
 				null,
 				null,
 				default_language,
@@ -369,8 +370,9 @@ public class Translator {
 				content_classes);
 	}
 
-	public static boolean init(final String config_path_or_string, final Locale default_language, final List<Locale> language_selection, final boolean run_language_detector, final boolean universal_translation_mode, final boolean model_reset, final boolean translation_reset, final boolean feed_content, final Platform platform, final String application_id, final String model_storage_path, final Class<?>... content_classes) {
+	public static boolean init(TaskHandle taskHandle, final String config_path_or_string, final Locale default_language, final List<Locale> language_selection, final boolean run_language_detector, final boolean universal_translation_mode, final boolean model_reset, final boolean translation_reset, final boolean feed_content, final Platform platform, final String application_id, final String model_storage_path, final Class<?>... content_classes) {
 		return init(
+				taskHandle,
 				null,
 				config_path_or_string,
 				default_language,
@@ -386,8 +388,9 @@ public class Translator {
 				content_classes);
 	}
 
-	public static boolean init(final Object framework_object, final Locale default_language, final List<Locale> language_selection, final boolean run_language_detector, final boolean universal_translation_mode, final boolean model_reset, final boolean translation_reset, final boolean feed_content, final Platform platform, final String application_id, final String model_storage_path, final Class<?>... content_classes) {
+	public static boolean init(TaskHandle taskHandle, final Object framework_object, final Locale default_language, final List<Locale> language_selection, final boolean run_language_detector, final boolean universal_translation_mode, final boolean model_reset, final boolean translation_reset, final boolean feed_content, final Platform platform, final String application_id, final String model_storage_path, final Class<?>... content_classes) {
 		return init(
+				taskHandle,
 				framework_object,
 				null,
 				default_language,
@@ -403,7 +406,7 @@ public class Translator {
 				content_classes);
 	}
 
-	public static boolean init(final Object framework_object, final String config_path_or_string, final Locale default_language, final List<Locale> language_selection, final boolean run_language_detector, final boolean universal_translation_mode, final boolean model_reset, final boolean translation_reset, final boolean feed_content, final Platform platform, final String application_id, final String model_storage_path, final Class<?>... content_classes) {
+	public static boolean init(TaskHandle taskHandle, final Object framework_object, final String config_path_or_string, final Locale default_language, final List<Locale> language_selection, final boolean run_language_detector, final boolean universal_translation_mode, final boolean model_reset, final boolean translation_reset, final boolean feed_content, final Platform platform, final String application_id, final String model_storage_path, final Class<?>... content_classes) {
 		if (!runningMaintenance && (framework == null)) {
 			//
 			runningMaintenance = true;
@@ -455,9 +458,9 @@ public class Translator {
 			T_Log.log("Starting Language Detection Model..."); //$NON-NLS-1$
 			alwaysRunDetector = run_language_detector;
 			if (alwaysRunDetector) {
-				defaultLanguage = runLanguageDetectorService("Testing, testing, is this thing working?"); //$NON-NLS-1$
+				defaultLanguage = runLanguageDetectorService(taskHandle, "Testing, testing, is this thing working?"); //$NON-NLS-1$
 			} else {
-				defaultLanguage = runLanguageDetectorOneTime("Testing, testing, is this thing working?"); //$NON-NLS-1$
+				defaultLanguage = runLanguageDetectorOneTime(taskHandle, "Testing, testing, is this thing working?"); //$NON-NLS-1$
 			}
 			if ((defaultLanguage == null) || !defaultLanguage.getLanguage().equals("en")) { //$NON-NLS-1$
 				T_Log.log("Language Detection Not Working: locale: " + defaultLanguage.getLanguage()); //$NON-NLS-1$
@@ -532,7 +535,7 @@ public class Translator {
 				for (final Locale l : getSelectedAndWorkingLanguages()) {
 					translateStacker.add(l.getDisplayLanguage(defaultLanguage));
 				}
-				translateStacker.feedTranslatorDatabase();
+				translateStacker.feedTranslatorDatabase(taskHandle);
 			}
 			return true;
 		}
@@ -716,7 +719,7 @@ public class Translator {
 	 * @param input   Text to translate
 	 * @return List of translated texts or empty list on error
 	 */
-	private static List<String> runCTranslate2(TaskHandle taskHandler, final Locale langIN, final Locale langOUT, final String input) {
+	private static List<String> runCTranslate2(TaskHandle taskHandle, final Locale langIN, final Locale langOUT, final String input) {
 		try {
 			exportPYFiles();
 			String hashString = sha512(Files.readString(scriptFileTranslate.toPath(), StandardCharsets.UTF_8));
@@ -738,7 +741,7 @@ public class Translator {
 					T_Log.log(
 							"No Model File Found, Searching For Languages That Translate To " + langOUT //$NON-NLS-1$
 									.getDisplayName(defaultLanguage));
-					final BridgeContainer bridge = bridgeLanguages(langIN, langOUT, input);
+					final BridgeContainer bridge = bridgeLanguages(taskHandle, langIN, langOUT, input);
 					if (bridge != null) {
 						finalInput = bridge.input;
 						finalLangIN = bridge.locale;
@@ -762,6 +765,7 @@ public class Translator {
 						finalInput);
 				pb.redirectErrorStream(false);
 				final Process p = pb.start();
+				taskHandle.registerProcess(p);
 				final StringBuilder output = new StringBuilder();
 				final Thread stdoutThread = new Thread(
 						() -> {
@@ -791,6 +795,8 @@ public class Translator {
 								T_Log.log("CTranslate2 Translation Failed At STDERR THREAD: ", e); //$NON-NLS-1$
 							}
 						});
+				taskHandle.registerThread(stdoutThread);
+				taskHandle.registerThread(stderrThread);
 				stdoutThread.start();
 				stderrThread.start();
 				stdoutThread.join();
@@ -837,7 +843,7 @@ public class Translator {
 	 * @return BridgeContainer Containing translated input data and language code,
 	 *         null if no bridge can be made
 	 */
-	private static BridgeContainer bridgeLanguages(final Locale langIN, final Locale langOUT, final String input) throws Exception {
+	private static BridgeContainer bridgeLanguages(TaskHandle taskHandle, final Locale langIN, final Locale langOUT, final String input) throws Exception {
 		if (languagesLinks.get(langIN.getLanguage()) != null) {
 			T_Log.log("Found Compatable Languages For: " + langIN.getDisplayName(defaultLanguage)); //$NON-NLS-1$
 			for (final String langBridgeCode : languagesLinks.get(langIN.getLanguage())) {
@@ -868,6 +874,7 @@ public class Translator {
 								input);
 						pb.redirectErrorStream(false);
 						final Process p = pb.start();
+						taskHandle.registerProcess(p);
 						final StringBuilder output = new StringBuilder();
 						final Thread stdoutThread = new Thread(
 								() -> {
@@ -897,6 +904,8 @@ public class Translator {
 										T_Log.log("CTranslate2 Translation Bridge Failed At STDERR THREAD: ", e); //$NON-NLS-1$
 									}
 								});
+						taskHandle.registerThread(stdoutThread);
+						taskHandle.registerThread(stderrThread);
 						stdoutThread.start();
 						stderrThread.start();
 						stdoutThread.join();
@@ -926,7 +935,7 @@ public class Translator {
 	 * @param input Text to detect the language of.
 	 * @return List of translated texts or empty list on error
 	 */
-	private static Locale runLanguageDetectorOneTime(final String input) {
+	private static Locale runLanguageDetectorOneTime(TaskHandle taskHandle, final String input) {
 		try {
 			exportPYFiles();
 			String hashString = sha512(Files.readString(scriptFileDetectLanguage.toPath(), StandardCharsets.UTF_8));
@@ -947,6 +956,7 @@ public class Translator {
 						"false"); //$NON-NLS-1$
 				pb.redirectErrorStream(false);
 				final Process p = pb.start();
+				taskHandle.registerProcess(p);
 				final StringBuilder output = new StringBuilder();
 				persistentWriter = new BufferedWriter(
 						new OutputStreamWriter(
@@ -993,6 +1003,9 @@ public class Translator {
 								T_Log.log("LanguageDetector Failed At STDOUT THREAD: ", e); //$NON-NLS-1$
 							}
 						});
+				taskHandle.registerThread(stdoutThread);
+				taskHandle.registerThread(stderrThread);
+				taskHandle.registerThread(stdinThread);
 				stdoutThread.start();
 				stderrThread.start();
 				stdinThread.start();
@@ -1028,7 +1041,7 @@ public class Translator {
 	 * @param input Text to detect the language of.
 	 * @return List of translated texts or empty list on error
 	 */
-	private synchronized static Locale runLanguageDetectorService(final String input) {
+	private synchronized static Locale runLanguageDetectorService(TaskHandle taskHandle, final String input) {
 		synchronized (processLock) {
 			if ((persistentProcess == null) || !persistentProcess.isAlive()) {
 				try {
@@ -1051,6 +1064,7 @@ public class Translator {
 								"true"); //$NON-NLS-1$
 						pb.redirectErrorStream(false);
 						persistentProcess = pb.start();
+						taskHandle.registerProcess(persistentProcess);
 						persistentWriter = new BufferedWriter(
 								new OutputStreamWriter(
 										persistentProcess.getOutputStream(),
@@ -1074,6 +1088,7 @@ public class Translator {
 									}
 								});
 						thread.start();
+						taskHandle.registerThread(thread);
 					}
 				} catch (final Exception e) {
 					T_Log.log("Failed To Start Persistent Language Detector", e); //$NON-NLS-1$
@@ -1089,7 +1104,7 @@ public class Translator {
 				final String jsonLine = persistentReader.readLine();
 				if (jsonLine == null) {
 					closeLanguageDetectorService();
-					return detectLanguage(input);
+					return detectLanguage(taskHandle, input);
 				}
 				final String topLangCode = jsonLine.trim();
 				T_Log.log("Top Language Code: " + topLangCode); //$NON-NLS-1$
@@ -1729,8 +1744,8 @@ public class Translator {
 		 *            language)
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
-		public <T> Map<T, String> translate(final Locale to) {
-			return this.translate(null, to);
+		public <T> Map<T, String> translate(TaskHandle taskHandle, final Locale to) {
+			return this.translate(taskHandle, null, to);
 		}
 
 		/**
@@ -1743,8 +1758,9 @@ public class Translator {
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
 		@SuppressWarnings("unchecked")
-		public <T> Map<T, String> translate(final Locale from, final Locale to) {
+		public <T> Map<T, String> translate(TaskHandle taskHandle, final Locale from, final Locale to) {
 			final Map<T, String> results = (Map<T, String>) Translator.translate(
+					taskHandle,
 					from != null ? from : defaultLanguage,
 					to,
 					this.getCombinedList(),
@@ -1763,8 +1779,8 @@ public class Translator {
 		 *            language)
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
-		public <T> Map<T, String> translate_ModelOnly(final Locale to) {
-			return this.translate_ModelOnly(null, to);
+		public <T> Map<T, String> translate_ModelOnly(TaskHandle taskHandle, final Locale to) {
+			return this.translate_ModelOnly(taskHandle, null, to);
 		}
 
 		/**
@@ -1778,9 +1794,13 @@ public class Translator {
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
 		@SuppressWarnings("unchecked")
-		public <T> Map<T, String> translate_ModelOnly(final Locale from, final Locale to) {
-			final Map<T, String> results = (Map<T, String>) Translator
-					.translate_OnlyUseModel(from != null ? from : defaultLanguage, to, this.getCombinedList(), this.doAsList);
+		public <T> Map<T, String> translate_ModelOnly(TaskHandle taskHandle, final Locale from, final Locale to) {
+			final Map<T, String> results = (Map<T, String>) Translator.translate_OnlyUseModel(
+					taskHandle,
+					from != null ? from : defaultLanguage,
+					to,
+					this.getCombinedList(),
+					this.doAsList);
 			return results;
 		}
 
@@ -1796,8 +1816,8 @@ public class Translator {
 		 *            language)
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
-		public <T> Map<T, String> translateAndFeedTranslatorDatabase(final Locale to) {
-			return this.translateAndFeedTranslatorDatabase(defaultLanguage, to);
+		public <T> Map<T, String> translateAndFeedTranslatorDatabase(TaskHandle taskHandle, final Locale to) {
+			return this.translateAndFeedTranslatorDatabase(taskHandle, defaultLanguage, to);
 		}
 
 		/**
@@ -1813,20 +1833,22 @@ public class Translator {
 		 * @return A map of translated Strings or Translatable to their translations.
 		 */
 		@SuppressWarnings("unchecked")
-		public <T> Map<T, String> translateAndFeedTranslatorDatabase(final Locale from, final Locale to) {
+		public <T> Map<T, String> translateAndFeedTranslatorDatabase(TaskHandle taskHandle, final Locale from, final Locale to) {
 			Map<T, String> result = new LinkedHashMap<>();
 			result = (Map<T, String>) Translator.translate(
+					taskHandle,
 					from != null ? from : defaultLanguage,
 					to,
 					this.getCombinedList(),
 					this.doAsList,
 					this.redoTranslationsInTableStacker);
-			new Thread(
+			Thread t = new Thread(
 					() -> {
 						T_Log.log("Feeding Translator In New Thread"); //$NON-NLS-1$
 						for (final Locale l : languageInUseFirst(getSelectedAndWorkingLanguages(), to)) {
 							if ((!l.equals(getDefaultSystemLanguage()) && (!l.equals(to)))) {
 								Translator.translate(
+										taskHandle,
 										from != null ? from : defaultLanguage,
 										l,
 										this.getCombinedList(),
@@ -1835,7 +1857,9 @@ public class Translator {
 							}
 						}
 						T_Log.log("Finished Feeding Translator, Thread Terminated"); //$NON-NLS-1$
-					}).start();
+					});
+			thread.start();
+			taskHandle.registerThread(t);
 			return result;
 		}
 
@@ -1843,10 +1867,11 @@ public class Translator {
 		 * Feeds the translator database with translation data from all languages.
 		 *
 		 */
-		public void feedTranslatorDatabase() {
+		public void feedTranslatorDatabase(TaskHandle taskHandle) {
 			for (final Locale l : getSelectedAndWorkingLanguages()) {
 				if (!l.equals(getDefaultSystemLanguage())) {
 					Translator.translate(
+							taskHandle,
 							defaultLanguage,
 							l,
 							this.getCombinedList(),
@@ -1880,11 +1905,11 @@ public class Translator {
 	 * @param input Text needed to detect the language
 	 * @return language of text input
 	 */
-	public static Locale detectLanguage(final String input) {
+	public static Locale detectLanguage(TaskHandle taskHandle, final String input) {
 		if (alwaysRunDetector) {
-			return runLanguageDetectorService(input);
+			return runLanguageDetectorService(taskHandle, input);
 		}
-		return runLanguageDetectorOneTime(input);
+		return runLanguageDetectorOneTime(taskHandle, input);
 	}
 
 	/**
@@ -1897,8 +1922,8 @@ public class Translator {
 	 * @return The translated string or the original object's string representation
 	 *         if no translation is available.
 	 */
-	public static String translate(final Locale to, final Object input) {
-		return translate(null, to, input, false);
+	public static String translate(TaskHandle taskHandle, final Locale to, final Object input) {
+		return translate(taskHandle, null, to, input, false);
 	}
 
 	/**
@@ -1911,8 +1936,8 @@ public class Translator {
 	 * @return The translated string or the original object's string representation
 	 *         if no translation is available.
 	 */
-	public static String translate(final Locale from, final Locale to, final Object input) {
-		return translate(from, to, input, false);
+	public static String translate(TaskHandle taskHandle, final Locale from, final Locale to, final Object input) {
+		return translate(taskHandle, from, to, input, false);
 	}
 
 	/**
@@ -1928,7 +1953,7 @@ public class Translator {
 	 * @return The translated string or the original object's string representation
 	 *         if no translation is available.
 	 */
-	public static String translate(final Locale from, final Locale to, final Object input, final boolean recreateTableEntry) {
+	public static String translate(TaskHandle taskHandle, final Locale from, final Locale to, final Object input, final boolean recreateTableEntry) {
 		if (input == null) {
 			T_Log.log("Null At Translate"); //$NON-NLS-1$
 			return null;
@@ -1952,7 +1977,7 @@ public class Translator {
 					if (translatedFromDatabase != null) {
 						return translatedFromDatabase;
 					}
-					final String translatedFromModel = doOneString(langIN, to, modelCode, input, true);
+					final String translatedFromModel = doOneString(taskHandle, langIN, to, modelCode, input, true);
 					if (translatedFromModel != null) {
 						return translatedFromModel;
 					}
@@ -1976,8 +2001,8 @@ public class Translator {
 	 * @return A map of input objects to their translations or the original string
 	 *         if no translation is available..
 	 */
-	public static <T> Map<T, String> translate(final Locale to, final List<T> inputs) {
-		return translate(null, to, inputs, true, false);
+	public static <T> Map<T, String> translate(TaskHandle taskHandle, final Locale to, final List<T> inputs) {
+		return translate(taskHandle, null, to, inputs, true, false);
 	}
 
 	/**
@@ -1993,8 +2018,8 @@ public class Translator {
 	 * @return A map of input objects to their translations or the original string
 	 *         if no translation is available..
 	 */
-	public static <T> Map<T, String> translate(final Locale to, final List<T> inputs, final boolean doAsList) {
-		return translate(null, to, inputs, doAsList, false);
+	public static <T> Map<T, String> translate(TaskHandle taskHandle, final Locale to, final List<T> inputs, final boolean doAsList) {
+		return translate(taskHandle, null, to, inputs, doAsList, false);
 	}
 
 	/**
@@ -2009,8 +2034,8 @@ public class Translator {
 	 * @return A map of input objects to their translations or the original string
 	 *         if no translation is available..
 	 */
-	public static <T> Map<T, String> translate(final Locale from, final Locale to, final List<T> inputs) {
-		return translate(null, to, inputs, true, false);
+	public static <T> Map<T, String> translate(TaskHandle taskHandle, final Locale from, final Locale to, final List<T> inputs) {
+		return translate(taskHandle, null, to, inputs, true, false);
 	}
 
 	/**
@@ -2026,8 +2051,8 @@ public class Translator {
 	 * @return A map of input objects to their translations or the original string
 	 *         if no translation is available..
 	 */
-	public static <T> Map<T, String> translate(final Locale from, final Locale to, final List<T> inputs, final boolean doAsList) {
-		return translate(null, to, inputs, doAsList, false);
+	public static <T> Map<T, String> translate(TaskHandle taskHandle, final Locale from, final Locale to, final List<T> inputs, final boolean doAsList) {
+		return translate(taskHandle, null, to, inputs, doAsList, false);
 	}
 
 	/**
@@ -2045,7 +2070,7 @@ public class Translator {
 	 *         if no translation is available..
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> Map<T, String> translate(final Locale from, final Locale to, final List<T> inputs, final boolean doAsList, final boolean recreateTableEntrys) {
+	public static <T> Map<T, String> translate(TaskHandle taskHandle, final Locale from, final Locale to, final List<T> inputs, final boolean doAsList, final boolean recreateTableEntrys) {
 		if (inputs == null) {
 			return null;
 		}
@@ -2070,6 +2095,7 @@ public class Translator {
 					final Map<T, String> foundResults = tSearchResult.found;
 					if (doAsList) {
 						final Map<T, String> missingResults = (Map<T, String>) doAsList(
+								taskHandle,
 								langIN,
 								to,
 								modelCode,
@@ -2079,6 +2105,7 @@ public class Translator {
 						return foundResults;
 					}
 					final Map<T, String> missingResults = (Map<T, String>) doAsStrings(
+							taskHandle,
 							langIN,
 							to,
 							modelCode,
@@ -2108,8 +2135,8 @@ public class Translator {
 	 * @return The translated string or the original value's string representation
 	 *         if no translation is available.
 	 */
-	public static String translate_OnlyUseModel(final Locale to, final Object input) {
-		return translate_OnlyUseModel(null, to, input);
+	public static String translate_OnlyUseModel(TaskHandle taskHandle, final Locale to, final Object input) {
+		return translate_OnlyUseModel(taskHandle, null, to, input);
 	}
 
 	/**
@@ -2122,7 +2149,7 @@ public class Translator {
 	 * @return The translated string or the original value's string representation
 	 *         if no translation is available.
 	 */
-	public static String translate_OnlyUseModel(final Locale from, final Locale to, final Object input) {
+	public static String translate_OnlyUseModel(TaskHandle taskHandle, final Locale from, final Locale to, final Object input) {
 		if (input == null) {
 			T_Log.log("Null At Translate"); //$NON-NLS-1$
 			return null;
@@ -2144,7 +2171,7 @@ public class Translator {
 				}
 				if (!langIN.getLanguage().equals(to.getLanguage())) {
 					final String modelCode = langIN.getLanguage() + "-" + to.getLanguage(); //$NON-NLS-1$
-					final String translatedFromModele = doOneString(langIN, to, modelCode, input, false);
+					final String translatedFromModele = doOneString(taskHandle, langIN, to, modelCode, input, false);
 					if (translatedFromModele != null) {
 						return translatedFromModele;
 					}
@@ -2168,8 +2195,8 @@ public class Translator {
 	 * @return A map of input Translatable values to their translations or the
 	 *         original string if no translation is available..
 	 */
-	public static <T> Map<T, String> translate_OnlyUseModel(final Locale to, final List<T> inputs) {
-		return translate_OnlyUseModel(null, to, inputs, true);
+	public static <T> Map<T, String> translate_OnlyUseModel(TaskHandle taskHandle, final Locale to, final List<T> inputs) {
+		return translate_OnlyUseModel(taskHandle, null, to, inputs, true);
 	}
 
 	/**
@@ -2185,7 +2212,7 @@ public class Translator {
 	 * @return A map of input Translatable values to their translations or the
 	 *         original string if no translation is available..
 	 */
-	public static <T> Map<T, String> translate_OnlyUseModel(final Locale from, final Locale to, final List<T> inputs, final boolean doAsList) {
+	public static <T> Map<T, String> translate_OnlyUseModel(TaskHandle taskHandle, final Locale from, final Locale to, final List<T> inputs, final boolean doAsList) {
 		if (inputs == null) {
 			return null;
 		}
@@ -2204,12 +2231,12 @@ public class Translator {
 				if (!langIN.getLanguage().equals(to.getLanguage())) {
 					final String modelCode = langIN.getLanguage() + "-" + to.getLanguage(); //$NON-NLS-1$
 					if (doAsList) {
-						results = doAsList(langIN, to, modelCode, inputs, false);
+						results = doAsList(taskHandle, langIN, to, modelCode, inputs, false);
 					}
 					if (!results.isEmpty()) {
 						return results;
 					}
-					results = doAsStrings(langIN, to, modelCode, inputs, false);
+					results = doAsStrings(taskHandle, langIN, to, modelCode, inputs, false);
 					if (!results.isEmpty()) {
 						return results;
 					}
@@ -2367,7 +2394,7 @@ public class Translator {
 	 *         the translation fails, keyed by the original input objects.
 	 * @throws Exception If an error occurs during translation or processing.
 	 */
-	private static <T> Map<T, String> doAsList(final Locale langIN, final Locale langOUT, final String modelCode, final List<T> inputs, final boolean doTranslation) throws Exception {
+	private static <T> Map<T, String> doAsList(TaskHandle taskHandle, final Locale langIN, final Locale langOUT, final String modelCode, final List<T> inputs, final boolean doTranslation) throws Exception {
 		final Map<T, String> results = new LinkedHashMap<>();
 		final List<List<T>> chunks = splitIntoChunks(inputs, modelCharLimit);
 		final TranslatorDatabaseManagement translator = getDatabaseManagement();
@@ -2377,7 +2404,7 @@ public class Translator {
 				final String jsonInput = new ObjectMapper().writeValueAsString(chunkedList);
 				T_Log.log("Translating List From Model: " + modelCode + " " + jsonInput); //$NON-NLS-1$ //$NON-NLS-2$
 				final String encoded = Base64.getEncoder().encodeToString(jsonInput.getBytes(StandardCharsets.UTF_8));
-				final List<String> outputs = runCTranslate2(langIN, langOUT, encoded);
+				final List<String> outputs = runCTranslate2(taskHandle, langIN, langOUT, encoded);
 				T_Log.log("Translation Results: " + new ObjectMapper().writeValueAsString(outputs)); //$NON-NLS-1$
 				if (outputs.size() == chunkedList.size()) {
 					for (int i = 0; i < chunkedList.size(); i++) {
@@ -2421,7 +2448,7 @@ public class Translator {
 	 *         the translation fails, keyed by the original input objects.
 	 * @throws Exception If an error occurs during translation or processing.
 	 */
-	private static <T> Map<T, String> doAsStrings(final Locale langIN, final Locale langOUT, final String modelCode, final List<T> inputs, final boolean doTranslateion) throws Exception {
+	private static <T> Map<T, String> doAsStrings(TaskHandle taskHandle, final Locale langIN, final Locale langOUT, final String modelCode, final List<T> inputs, final boolean doTranslateion) throws Exception {
 		final Map<T, String> results = new LinkedHashMap<>();
 		final List<List<T>> chunks = splitIntoChunks(inputs, modelCharLimit);
 		final TranslatorDatabaseManagement translator = getDatabaseManagement();
@@ -2438,7 +2465,7 @@ public class Translator {
 						continue;
 					}
 					T_Log.log("Translating String From Model: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
-					final List<String> result = runCTranslate2(langIN, langOUT, key);
+					final List<String> result = runCTranslate2(taskHandle, langIN, langOUT, key);
 					final String translatedFromModel = result.isEmpty() ? null : result.get(0);
 					if ((translatedFromModel == null) || translatedFromModel.isBlank()) {
 						results.put(inputs.get(i), "Model_Translation_Failed"); //$NON-NLS-1$
@@ -2473,7 +2500,7 @@ public class Translator {
 	 *         translation fails.
 	 * @throws Exception If an error occurs during translation or processing.
 	 */
-	private static String doOneString(final Locale langIN, final Locale langOUT, final String modelCode, final Object input, final boolean doTranslateion) throws Exception {
+	private static String doOneString(TaskHandle taskHandle, final Locale langIN, final Locale langOUT, final String modelCode, final Object input, final boolean doTranslateion) throws Exception {
 		if (input == null) {
 			T_Log.log("Null At Translate"); //$NON-NLS-1$
 			return null;
@@ -2488,7 +2515,7 @@ public class Translator {
 		}
 		final String placeheld = key;
 		T_Log.log("Translating String From Model: " + modelCode + " : " + key); //$NON-NLS-1$ //$NON-NLS-2$
-		final List<String> result = runCTranslate2(langIN, langOUT, placeheld);
+		final List<String> result = runCTranslate2(taskHandle, langIN, langOUT, placeheld);
 		final String translatedFromModel = result.isEmpty() ? null : result.get(0);
 		if ((translatedFromModel != null) && !translatedFromModel.isBlank()) {
 			final String formatted = translatedFromModel;

@@ -9,13 +9,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.sun.management.OperatingSystemMXBean;
@@ -25,8 +25,10 @@ import didzapp.hf_translator.Translator;
 import didzapp.hf_translator.Translator.Platform;
 
 public class HostMemoryManagemant {
-	private static long memoryLimitBytes = 500 * 1024L * 1024L; // 1-GB default
-	private static double saftyMargin = 0.20; // 1-GB default
+	private static volatile long memoryLimitBytes = 5L * 1024L * 1024L;
+	private static volatile double saftyMargin = 0.20; // 1-GB default
+	private static volatile long refreshRate = 3000L;
+	private static volatile long lastMemoryCheckTimestamp = 0;
 	private static AtomicBoolean autoRefreshMemoryLimits = new AtomicBoolean(
 			false);
 	private final static AtomicLong reservedMemory = new AtomicLong(
@@ -43,8 +45,6 @@ public class HostMemoryManagemant {
 			0);
 	private final static Map<Long, TaskReservation> activeTasks = new ConcurrentHashMap<>();
 	private final static Map<String, TaskStatistics> taskStatistics = new ConcurrentHashMap<>();
-	private static long refreshRate = 5_000L;
-	private static volatile long lastMemoryCheckTimestamp = 0;
 	private static final Object memoryCheckLock = new Object();
 	private static final List<GarbageCollectorMXBean> garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans();
 	private static final AtomicLong totalGarbageCollections = new AtomicLong(
@@ -97,7 +97,11 @@ public class HostMemoryManagemant {
 	 */
 	public static void setHostMemoryLimitMB(long applicationMemoryLimitMB) {
 		if (applicationMemoryLimitMB > -1) {
-			memoryLimitBytes = applicationMemoryLimitMB * 1024L * 1024L;
+			try {
+				memoryLimitBytes = Math.multiplyExact(applicationMemoryLimitMB, 1024L * 1024L);
+			} catch (ArithmeticException _) {
+				memoryLimitBytes = Long.MAX_VALUE;
+			}
 			autoRefreshMemoryLimits.set(false);
 		} else {
 			memoryLimitBytes = getRecommendedMemoryBudgetMB();
@@ -120,15 +124,11 @@ public class HostMemoryManagemant {
 	 * memory reservations and conservation.
 	 *
 	 */
-	public static void setHostMemorySaftyMargin(double saftyMargin0to1Double) {
-		if (saftyMargin > -1) {
-			if (saftyMargin < -1) {
-				saftyMargin = -1;
-			}
-			if (saftyMargin > 1) {
-				saftyMargin = 0.90;
-			}
+	public static void setHostMemorySafetyMargin(double saftyMargin0to1Double) {
+		if (Double.isFinite(saftyMargin0to1Double) && saftyMargin0to1Double >= 0.0 && saftyMargin0to1Double <= 1.0) {
 			saftyMargin = saftyMargin0to1Double;
+		} else {
+			saftyMargin = 0.20;
 		}
 	}
 
@@ -153,51 +153,93 @@ public class HostMemoryManagemant {
 	 */
 	public static class TaskHandle implements AutoCloseable {
 		private final TaskReservation reservation;
-		private final AtomicBoolean closed = new AtomicBoolean(
-				false);
 		private final Map<Long, Long> trackedThreads = new ConcurrentHashMap<>();
 		private final Map<Long, Process> trackedProcesses = new ConcurrentHashMap<>();
 		private final Map<Long, Long> trackedProcessMaxUsage = new ConcurrentHashMap<>();
 		private final AtomicLong totalAllocatedBytes = new AtomicLong(
 				0);
-		private final ScheduledExecutorService processMonitor = Executors.newSingleThreadScheduledExecutor();
+		private final ScheduledExecutorService processMonitor = Executors.newSingleThreadScheduledExecutor(r -> {
+			Thread thread = new Thread(
+					r,
+					"TaskProcessMonitor"); //$NON-NLS-1$
+			thread.setDaemon(true);
+			return thread;
+		});
+		private final AtomicBoolean monitorStarted = new AtomicBoolean(
+				false);
+		private final AtomicBoolean closed = new AtomicBoolean(
+				false);
 
 		private static ThreadMXBean getThreadMXBean() {
-			return (ThreadMXBean) ManagementFactory.getThreadMXBean();
+			ThreadMXBean bean = (ThreadMXBean) ManagementFactory.getThreadMXBean();
+			bean.setThreadAllocatedMemoryEnabled(true);
+			return bean;
 		}
 
 		public void registerThread(Thread thread) {
 			ThreadMXBean bean = getThreadMXBean();
-			long threadId = thread.threadId();
-			long allocated = bean.getThreadAllocatedBytes(threadId);
-			if (allocated >= 0) {
-				this.trackedThreads.putIfAbsent(Long.valueOf(threadId), Long.valueOf(allocated));
+			if (bean.isThreadAllocatedMemorySupported() && bean.isThreadAllocatedMemoryEnabled()) {
+				long threadId = thread.threadId();
+				long allocated = bean.getThreadAllocatedBytes(threadId);
+				if (allocated >= 0) {
+					this.trackedThreads.putIfAbsent(Long.valueOf(threadId), Long.valueOf(allocated));
+				}
+			} else {
+				T_Log.log("Error Thread Is Not Allocated Memory Supported or Thread Is Not Allocated Memory Enabled()"); //$NON-NLS-1$
 			}
 		}
 
-		public void registerProcess(Process process) {
+		public synchronized void registerProcess(Process process) {
+			Objects.requireNonNull(process, "process"); //$NON-NLS-1$
+			if (this.closed.get()) {
+				throw new IllegalStateException(
+						"TaskHandle Is Already Closed"); //$NON-NLS-1$
+			}
 			long pid = process.pid();
 			this.trackedProcesses.put(Long.valueOf(pid), process);
-			this.processMonitor.scheduleAtFixedRate(() -> {
-				Process tracked = this.trackedProcesses.get(Long.valueOf(pid));
-				if (tracked == null || !tracked.isAlive()) {
-					this.trackedProcesses.remove(Long.valueOf(pid));
-					return;
-				}
-				long allocated = Translator.platformRuningOn == Platform.WINDOWS ? getProcessMemoryBytesWindows(
-						pid) : Translator.platformRuningOn == Platform.LINUX ? getProcessMemoryBytesLinux(pid) : 0L;
-				if (allocated >= 0) {
-					this.trackedProcessMaxUsage.put(
-							Long.valueOf(pid),
-							Long.valueOf(Math.max(this.trackedProcessMaxUsage.get(Long.valueOf(pid)).longValue(), allocated)));
-				}
-			}, 0, refreshRate / 2, TimeUnit.MILLISECONDS);
-			process.onExit().thenRun(() -> {
-				this.trackedProcesses.remove(Long.valueOf(pid));
+			// Remove the process when it exits.
+			// Do NOT shut down the shared monitor here.
+			process.onExit().whenComplete((_, _) -> {
+				this.trackedProcesses.remove(Long.valueOf(pid), process);
 			});
+			// Start only one monitoring job per TaskHandle.
+			if (this.monitorStarted.compareAndSet(false, true)) {
+				long period = Math.max(1L, refreshRate / 2);
+				try {
+					this.processMonitor.scheduleWithFixedDelay(this::monitorProcesses, 0L, period, TimeUnit.MILLISECONDS);
+				} catch (RuntimeException e) {
+					this.monitorStarted.set(false);
+					this.trackedProcesses.remove(Long.valueOf(pid), process);
+					throw e;
+				}
+			}
+		}
+
+		private void monitorProcesses() {
+			if (this.closed.get()) {
+				return;
+			}
+			for (Map.Entry<Long, Process> entry : this.trackedProcesses.entrySet()) {
+				try {
+					long pid = entry.getKey().longValue();
+					Process process = entry.getValue();
+					if (!process.isAlive()) {
+						this.trackedProcesses.remove(Long.valueOf(pid), process);
+						continue;
+					}
+					long allocated = Translator.platformRuningOn == Platform.WINDOWS ? getProcessMemoryBytesWindows(
+							pid) : Translator.platformRuningOn == Platform.LINUX ? getProcessMemoryBytesLinux(pid) : -1L;
+					if (allocated >= 0) {
+						this.trackedProcessMaxUsage.merge(Long.valueOf(pid), Long.valueOf(allocated), Math::max);
+					}
+				} catch (RuntimeException e) {
+					T_Log.log("Error While Monitoring Task Process", e); //$NON-NLS-1$
+				}
+			}
 		}
 
 		private static long getProcessMemoryBytesWindows(long pid) {
+			Process powershell = null;
 			try {
 				ProcessBuilder builder = new ProcessBuilder(
 						"powershell.exe", //$NON-NLS-1$
@@ -206,23 +248,35 @@ public class HostMemoryManagemant {
 						"-Command", //$NON-NLS-1$
 						"(Get-Process -Id " + pid + ").WorkingSet64"); //$NON-NLS-1$ //$NON-NLS-2$
 				builder.redirectErrorStream(true);
-				Process powershell = builder.start();
+				powershell = builder.start();
+				// Never wait indefinitely for PowerShell.
+				if (!powershell.waitFor(2, TimeUnit.SECONDS)) {
+					powershell.destroyForcibly();
+					powershell.waitFor(1, TimeUnit.SECONDS);
+					return -1L;
+				}
+				if (powershell.exitValue() != 0) {
+					return -1L;
+				}
 				try (BufferedReader reader = new BufferedReader(
 						new InputStreamReader(
 								powershell.getInputStream()))) {
 					String output = reader.readLine();
-					if (output != null && powershell.waitFor() == 0) {
-						return Long.parseLong(output.trim());
-					}
+					return output == null ? -1L : Long.parseLong(output.trim());
 				}
+			} catch (InterruptedException e) {
+				T_Log.log("Interupted At Process Monitor On Windows", e, true); //$NON-NLS-1$
 				powershell.destroyForcibly();
-			} catch (InterruptedException | NumberFormatException | IOException e) {
+				Thread.currentThread().interrupt();
+				return -1L;
+			} catch (IOException | NumberFormatException e) {
 				T_Log.log("Error While Reading Process Memory Usage On Windows", e); //$NON-NLS-1$
-				if (e instanceof InterruptedException) {
-					Thread.currentThread().interrupt();
+				return -1L;
+			} finally {
+				if (powershell != null && powershell.isAlive()) {
+					powershell.destroyForcibly();
 				}
 			}
-			return -1L;
 		}
 
 		private static long getProcessMemoryBytesLinux(long pid) {
@@ -283,6 +337,9 @@ public class HostMemoryManagemant {
 		@Override
 		public void close() {
 			if (this.closed.compareAndSet(false, true)) {
+				this.processMonitor.shutdownNow();
+				this.trackedProcesses.clear();
+				this.trackedThreads.clear();
 				release(this.reservation);
 			}
 		}
@@ -295,7 +352,8 @@ public class HostMemoryManagemant {
 		private final AtomicLong executionCount = new AtomicLong();
 		private final AtomicLong totalAllocatedBytes = new AtomicLong();
 		private final AtomicLong maximumAllocatedBytes = new AtomicLong();
-		private final AtomicLong minimumAllocatedBytes = new AtomicLong();
+		private final AtomicLong minimumAllocatedBytes = new AtomicLong(
+				Long.MAX_VALUE);
 		private final AtomicLong averageAllocatedBytes = new AtomicLong();
 
 		public void recordUsage(String taskName, long allocatedBytes) {
@@ -353,7 +411,8 @@ public class HostMemoryManagemant {
 		}
 
 		public long getMinimumUsageBytes() {
-			return this.minimumAllocatedBytes.get();
+			long value = this.minimumAllocatedBytes.get();
+			return value == Long.MAX_VALUE ? 0 : value;
 		}
 
 		public long getExecutionCount() {
@@ -367,12 +426,21 @@ public class HostMemoryManagemant {
 	 * Returns a TaskHandle if successful. Returns null if insufficient memory is
 	 * available.
 	 */
-	private static TaskHandle tryAcquire(String taskName, long requiredMemoryMB) {
+	private static TaskHandle tryAcquire(String taskName, long requiredMemoryMB) throws Exception {
 		if (autoRefreshMemoryLimits.get()) {
 			refreshMemoryBudgetIfRequired();
 		}
-		refreshMemoryBudgetIfRequired();
-		long requiredBytes = requiredMemoryMB * 1024L * 1024L;
+		long id = taskIds.incrementAndGet();
+		if (id > 1000000000) {
+			throw new IllegalStateException(
+					"Task ID Space Exhausted"); //$NON-NLS-1$
+		}
+		long requiredBytes;
+		try {
+			requiredBytes = Math.multiplyExact(requiredMemoryMB, 1024L * 1024L);
+		} catch (ArithmeticException _) {
+			requiredBytes = Long.MAX_VALUE;
+		}
 		if (requiredBytes <= 0 || requiredBytes > memoryLimitBytes) {
 			return null;
 		}
@@ -384,10 +452,6 @@ public class HostMemoryManagemant {
 			if (reservedMemory.compareAndSet(current, current + requiredBytes)) {
 				break;
 			}
-		}
-		long id = taskIds.incrementAndGet();
-		if (id > 1000000000) {
-			taskIds.set(0);
 		}
 		TaskReservation reservation = new TaskReservation(
 				id,
@@ -405,15 +469,17 @@ public class HostMemoryManagemant {
 		updateGarbageCollectionStats();
 		updateGarbageCollectedBytes();
 		long now = System.currentTimeMillis();
-		if (now - lastMemoryCheckTimestamp < refreshRate) {
-			return;
-		}
-		synchronized (memoryCheckLock) {
-			now = System.currentTimeMillis();
-			if (now - lastMemoryCheckTimestamp >= refreshRate) {
-				long recommendedMB = getRecommendedMemoryBudgetMB();
-				memoryLimitBytes = recommendedMB * 1024L * 1024L;
-				lastMemoryCheckTimestamp = System.currentTimeMillis();
+		if (refreshRate > 0) {
+			if (now - lastMemoryCheckTimestamp < refreshRate) {
+				return;
+			}
+			synchronized (memoryCheckLock) {
+				now = System.currentTimeMillis();
+				if (now - lastMemoryCheckTimestamp >= refreshRate) {
+					long recommendedMB = getRecommendedMemoryBudgetMB();
+					memoryLimitBytes = recommendedMB * 1024L * 1024L;
+					lastMemoryCheckTimestamp = System.currentTimeMillis();
+				}
 			}
 		}
 		long projectedMemoryUsage = (long) (reservedMemory
@@ -554,25 +620,32 @@ public class HostMemoryManagemant {
 		return Map.copyOf(HostMemoryManagemant.taskStatistics);
 	}
 
-	/**
-	 * Execute a task if the needed memory is available and track its memory usage
-	 * statistics.
-	 */
-	public static <T> T execute(String taskName, final Function<TaskHandle, T> action) throws Exception {
-		return execute(taskName, action, -1);
+	@FunctionalInterface
+	public interface TaskAction<T> {
+		void execute(T taskHandle) throws Exception;
 	}
 
 	/**
 	 * Execute a task if the needed memory is available and track its memory usage
 	 * statistics.
 	 */
-	public static <T> T execute(String taskName, final Function<TaskHandle, T> action, long memoryAllocationOverride) throws Exception {
+	public static void execute(String taskName, final TaskAction<TaskHandle> action) throws Exception {
+		execute(taskName, -1, action);
+	}
+
+	/**
+	 * Execute a task if the needed memory is available and track its memory usage
+	 * statistics.
+	 * 
+	 * @param <T>
+	 */
+	public static void execute(String taskName, long memoryAllocationOverride, final TaskAction<TaskHandle> action) throws Exception {
 		long reserve = memoryAllocationOverride > -1 ? memoryAllocationOverride : getAverageTaskUsageMB(taskName);
 		if (reserve > 0) {
 			long remaining = memoryLimitBytes - reservedMemory.get();
 			boolean has20PercentOrLessLeft = remaining <= (saftyMargin * memoryLimitBytes);
-			reserve = reserve + ((limitMemoryUsage.get() && has20PercentOrLessLeft) ? Math
-					.min(reserve, Math.max(0L, memoryLimitBytes - reserve)) : (long) (saftyMargin * reserve));
+			reserve += (limitMemoryUsage.get() && has20PercentOrLessLeft) ? Math
+					.min(reserve, Math.max(0L, memoryLimitBytes - reservedMemory.get())) : (long) (saftyMargin * reserve);
 		} else {
 			reserve = memoryLimitBytes;
 		}
@@ -584,7 +657,7 @@ public class HostMemoryManagemant {
 			long initialGarbageCollectedBytes = totalGarbageCollectedBytes.get();
 			handle.registerThread(Thread.currentThread());
 			try {
-				return action.apply(handle);
+				action.execute(handle);
 			} finally {
 				handle.unregisterThread(Thread.currentThread());
 				long allocatedBytes = handle.getTotalAllocatedBytes();
