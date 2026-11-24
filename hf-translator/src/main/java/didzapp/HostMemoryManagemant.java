@@ -25,9 +25,9 @@ import didzapp.hf_translator.Translator;
 import didzapp.hf_translator.Translator.Platform;
 
 public class HostMemoryManagemant {
-	private static volatile long memoryLimitBytes = 5L * 1024L * 1024L;
-	private static volatile double saftyMargin = 0.20; // 1-GB default
-	private static volatile long refreshRate = 3000L;
+	private static volatile long memoryLimitBytes = 500L * 1024L * 1024L;// 500-MB default
+	private static volatile double saftyMargin = 0.10; // 1-GB default
+	private static volatile long refreshRate = 3000L;// 3 sec default
 	private static volatile long lastMemoryCheckTimestamp = 0;
 	private static AtomicBoolean autoRefreshMemoryLimits = new AtomicBoolean(
 			false);
