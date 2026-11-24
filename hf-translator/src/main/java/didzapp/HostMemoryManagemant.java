@@ -593,7 +593,7 @@ public class HostMemoryManagemant {
 		long reserve = memoryAllocationOverride > -1 ? memoryAllocationOverride : getAverageTaskUsageMB(taskName);
 		if (reserve > 0) {
 			long remaining = memoryLimitBytes - reservedMemory.get();
-			reserve += Math.min(reserve, Math.max(remaining, (reserve + (saftyMargin * reserve))));
+			reserve += Math.min(remaining, (reserve + (saftyMargin * reserve)));
 		}
 		T_Log.log("Requested Memory Reserve MB: " + reserve); //$NON-NLS-1$
 		try (TaskHandle handle = tryAcquire(taskName, reserve)) {
