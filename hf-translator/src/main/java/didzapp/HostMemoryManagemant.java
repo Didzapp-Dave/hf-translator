@@ -3,11 +3,9 @@ package didzapp;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,71 +23,25 @@ import didzapp.hf_translator.Translator;
 import didzapp.hf_translator.Translator.Platform;
 
 public class HostMemoryManagemant {
-	private static volatile long memoryLimitBytes = 500L * 1024L * 1024L;// 500-MB default
-	private static volatile double saftyMargin = 0.10; // 1-GB default
+	private static volatile long memoryLimitBytes = 100L * 1024L * 1024L;// 100-MB default
+	private static volatile double saftyMargin = 0.10; // 10% default
 	private static volatile long refreshRate = 3000L;// 3 sec default
 	private static volatile long lastMemoryCheckTimestamp = 0;
 	private static AtomicBoolean autoRefreshMemoryLimits = new AtomicBoolean(
 			false);
 	private final static AtomicLong reservedMemory = new AtomicLong(
 			0);
-	private final static AtomicBoolean limitMemoryUsage = new AtomicBoolean(
-			false);
 	private static final AtomicLong totalNetMemoryUsage = new AtomicLong(
 			0);
 	private static final AtomicLong totalCompletedTasks = new AtomicLong(
-			0);
-	private static final AtomicLong totalNetMemoryUsageAverage = new AtomicLong(
 			0);
 	private final static AtomicLong taskIds = new AtomicLong(
 			0);
 	private final static Map<Long, TaskReservation> activeTasks = new ConcurrentHashMap<>();
 	private final static Map<String, TaskStatistics> taskStatistics = new ConcurrentHashMap<>();
 	private static final Object memoryCheckLock = new Object();
-	private static final List<GarbageCollectorMXBean> garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans();
-	private static final AtomicLong totalGarbageCollections = new AtomicLong(
-			0);
-	private static final AtomicLong totalGarbageCollectionTime = new AtomicLong(
-			0);
-	private static final AtomicLong totalGarbageCollectedBytes = new AtomicLong(
-			0);
-	private static final AtomicLong previousHeapUsage = new AtomicLong(
-			0);
 	private final static AtomicBoolean resourceHalvinglock = new AtomicBoolean(
 			false);
-
-	/**
-	 * Update the garbage collection stats.
-	 *
-	 */
-	private static void updateGarbageCollectionStats() {
-		long collections = 0;
-		long collectionTime = 0;
-		for (GarbageCollectorMXBean bean : garbageCollectors) {
-			long count = bean.getCollectionCount();
-			long time = bean.getCollectionTime();
-			if (count >= 0) {
-				collections += count;
-			}
-			if (time >= 0) {
-				collectionTime += time;
-			}
-		}
-		totalGarbageCollections.set(collections);
-		totalGarbageCollectionTime.set(collectionTime);
-	}
-
-	/**
-	 * Update the calculated garbage collected bytes.
-	 *
-	 */
-	private static void updateGarbageCollectedBytes() {
-		long currentHeapUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed();
-		long previous = previousHeapUsage.getAndSet(currentHeapUsage);
-		if (previous > currentHeapUsage) {
-			totalGarbageCollectedBytes.addAndGet(previous - currentHeapUsage);
-		}
-	}
 
 	/**
 	 * Sets the maximum amount of memory for application to use.
@@ -107,6 +59,7 @@ public class HostMemoryManagemant {
 			memoryLimitBytes = getRecommendedMemoryBudgetMB();
 			autoRefreshMemoryLimits.set(true);
 		}
+		T_Log.log("Memory Limit: " + memoryLimitBytes + " : Auto Refresh: " + autoRefreshMemoryLimits); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	/**
@@ -117,6 +70,7 @@ public class HostMemoryManagemant {
 		if (refreshRateSec > -1) {
 			refreshRate = refreshRateSec * 1000;// millis
 		}
+		T_Log.log("Refresh Rate: " + refreshRate); //$NON-NLS-1$
 	}
 
 	/*
@@ -127,9 +81,8 @@ public class HostMemoryManagemant {
 	public static void setHostMemorySafetyMargin(double saftyMargin0to1Double) {
 		if (Double.isFinite(saftyMargin0to1Double) && saftyMargin0to1Double >= 0.0 && saftyMargin0to1Double <= 1.0) {
 			saftyMargin = saftyMargin0to1Double;
-		} else {
-			saftyMargin = 0.20;
 		}
+		T_Log.log("Memory Margin: " + saftyMargin); //$NON-NLS-1$
 	}
 
 	/**
@@ -466,8 +419,6 @@ public class HostMemoryManagemant {
 	 * Refresh memory limits if after refresh time.
 	 */
 	private static void refreshMemoryBudgetIfRequired() {
-		updateGarbageCollectionStats();
-		updateGarbageCollectedBytes();
 		long now = System.currentTimeMillis();
 		if (refreshRate > 0) {
 			if (now - lastMemoryCheckTimestamp < refreshRate) {
@@ -482,9 +433,6 @@ public class HostMemoryManagemant {
 				}
 			}
 		}
-		long projectedMemoryUsage = (long) (reservedMemory
-				.get() + (totalNetMemoryUsageAverage.get() + (saftyMargin * totalNetMemoryUsageAverage.get())));
-		limitMemoryUsage.set(projectedMemoryUsage > memoryLimitBytes);
 	}
 
 	/**
@@ -557,8 +505,10 @@ public class HostMemoryManagemant {
 		long hostAvailable = getHostAvailableMemoryMB();
 		long jvmAvailable = getJvmAvailableMemoryMB();
 		long available = Math.min(hostAvailable, jvmAvailable);
-		// Keep 20% available as a safety margin.
-		return (long) (available * 0.80);
+		long budget = (long) (available + (saftyMargin * available));
+		T_Log.log("Recommended Memory Budget MB: " + budget); //$NON-NLS-1$
+		// Keep safty margin available.
+		return budget;
 	}
 
 	/**
@@ -643,18 +593,15 @@ public class HostMemoryManagemant {
 		long reserve = memoryAllocationOverride > -1 ? memoryAllocationOverride : getAverageTaskUsageMB(taskName);
 		if (reserve > 0) {
 			long remaining = memoryLimitBytes - reservedMemory.get();
-			boolean has20PercentOrLessLeft = remaining <= (saftyMargin * memoryLimitBytes);
-			reserve += (limitMemoryUsage.get() && has20PercentOrLessLeft) ? Math
-					.min(reserve, Math.max(0L, memoryLimitBytes - reservedMemory.get())) : (long) (saftyMargin * reserve);
-		} else {
-			reserve = memoryLimitBytes;
+			reserve += Math.min(reserve, Math.max(remaining, (reserve + (saftyMargin * reserve))));
 		}
+		T_Log.log("Requested Memory Reserve MB: " + reserve); //$NON-NLS-1$
 		try (TaskHandle handle = tryAcquire(taskName, reserve)) {
 			if (handle == null) {
+				T_Log.log("Detected Memory Budget MB: " + getRecommendedMemoryBudgetMB()); //$NON-NLS-1$
 				throw new IllegalStateException(
 						"Insufficient Resources For Task: " + taskName); //$NON-NLS-1$
 			}
-			long initialGarbageCollectedBytes = totalGarbageCollectedBytes.get();
 			handle.registerThread(Thread.currentThread());
 			try {
 				action.execute(handle);
@@ -662,12 +609,6 @@ public class HostMemoryManagemant {
 				handle.unregisterThread(Thread.currentThread());
 				long allocatedBytes = handle.getTotalAllocatedBytes();
 				recordTaskUsage(taskName, allocatedBytes);
-				updateGarbageCollectionStats();
-				updateGarbageCollectedBytes();
-				long JVM_Unallocated = totalGarbageCollectedBytes.get() - initialGarbageCollectedBytes;
-				long taskNetMemoryUsage = allocatedBytes - JVM_Unallocated;
-				totalNetMemoryUsageAverage
-						.set(totalNetMemoryUsage.addAndGet(taskNetMemoryUsage) / totalCompletedTasks.incrementAndGet());
 				if (totalNetMemoryUsage.get() > memoryLimitBytes) {
 					if (resourceHalvinglock.compareAndSet(false, true)) {
 						try {
@@ -677,7 +618,6 @@ public class HostMemoryManagemant {
 						} finally {
 							T_Log.log("Total Net Executed Tasks: " + totalCompletedTasks.get()); //$NON-NLS-1$
 							T_Log.log("Total Net JVM Memory Usage: " + totalNetMemoryUsage.get()); //$NON-NLS-1$
-							T_Log.log("Total Net Memory Usage Average: " + totalNetMemoryUsageAverage.get()); //$NON-NLS-1$
 							resourceHalvinglock.set(false);
 						}
 					}
@@ -694,7 +634,6 @@ public class HostMemoryManagemant {
 		totalNetMemoryUsage.set(totalNetMemoryUsage.get() / 2);
 		T_Log.log("Memory Usage Variables Halved: Total Net Executed Tasks: " + totalCompletedTasks.get()); //$NON-NLS-1$
 		T_Log.log("Memory Usage Variables Halved: Total Net JVM Memory Usage: " + totalNetMemoryUsage.get()); //$NON-NLS-1$
-		T_Log.log("Total Net Memory Usage Average: " + totalNetMemoryUsageAverage.get()); //$NON-NLS-1$
 	}
 
 	/**
