@@ -29,7 +29,7 @@
 			<maxHistory>90</maxHistory>
 
 			<!-- Maximum total archived log size -->
-			<totalSizeCap>2GB</totalSizeCap>
+			<totalSizeCap>1GB</totalSizeCap>
 
 		</rollingPolicy>
 		<encoder>

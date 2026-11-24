@@ -5,9 +5,9 @@ import org.slf4j.LoggerFactory;
 
 public class T_Log {
 	static final Logger LOGGER = LoggerFactory.getLogger(T_Log.class);
-	public static boolean debug = false;
-	public static boolean testing = false;
-	public static boolean showCritical = false;
+	public static boolean debug = true;
+	public static boolean testing = true;
+	public static boolean showCritical = true;
 	public static boolean showIgnored = false;
 
 	public static void log(final String message) {

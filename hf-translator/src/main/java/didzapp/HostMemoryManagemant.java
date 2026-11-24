@@ -394,7 +394,7 @@ public class HostMemoryManagemant {
 		} catch (ArithmeticException _) {
 			requiredBytes = Long.MAX_VALUE;
 		}
-		if (requiredBytes <= 0 || requiredBytes > memoryLimitBytes) {
+		if (requiredBytes < 0 || requiredBytes > memoryLimitBytes) {
 			return null;
 		}
 		while (true) {
@@ -594,7 +594,7 @@ public class HostMemoryManagemant {
 		if (reserve > 0) {
 			long remaining = memoryLimitBytes - reservedMemory.get();
 			long margin = (long) (saftyMargin * reserve);
-			reserve += Math.min(remaining, (reserve + margin));
+			reserve = Math.min(remaining, (reserve + margin));
 		}
 		T_Log.log("Requested Memory Reserve MB: " + reserve); //$NON-NLS-1$
 		try (TaskHandle handle = tryAcquire(taskName, reserve)) {
