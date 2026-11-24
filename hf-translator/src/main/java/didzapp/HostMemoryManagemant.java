@@ -56,7 +56,7 @@ public class HostMemoryManagemant {
 			}
 			autoRefreshMemoryLimits.set(false);
 		} else {
-			memoryLimitBytes = getRecommendedMemoryBudgetMB();
+			memoryLimitBytes = Math.multiplyExact(getRecommendedMemoryBudgetMB(), 1024L * 1024L);
 			autoRefreshMemoryLimits.set(true);
 		}
 		T_Log.log("Memory Limit: " + memoryLimitBytes + " : Auto Refresh: " + autoRefreshMemoryLimits); //$NON-NLS-1$ //$NON-NLS-2$
