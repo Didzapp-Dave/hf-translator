@@ -1,15 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+	<!-- Default log directory -->
+	<property name="LOG_DIR" value="${LOG_DIR:-logs}" />
+
+	<!-- Console output -->
 	<appender name="CONSOLE"
 		class="ch.qos.logback.core.ConsoleAppender">
 		<encoder charset="UTF-8">
-			<pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n</pattern>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} -
+				%msg%n</pattern>
 		</encoder>
 	</appender>
 
-	<!--<root level="OFF"> -->
+	<!-- Permanent file output -->
+	<appender name="FILE"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${LOG_DIR}/didzapp.log</file>
+
+		<rollingPolicy
+			class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+			<!-- New file each day, with additional files if over 20MB -->
+			<fileNamePattern>${LOG_DIR}/archive/didzapp-%d{yyyy-MM-dd}.%i.log.gz
+			</fileNamePattern>
+
+			<maxFileSize>20MB</maxFileSize>
+
+			<!-- Keep logs for 90 days -->
+			<maxHistory>90</maxHistory>
+
+			<!-- Maximum total archived log size -->
+			<totalSizeCap>2GB</totalSizeCap>
+
+		</rollingPolicy>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} -
+				%msg%n</pattern>
+		</encoder>
+	</appender>
+
+
+	<!--<root level="OFF"> Level order : TRACE DEBUG INFO WARN ERROR -->
 	<root level="INFO">
 		<appender-ref ref="CONSOLE" />
+		<appender-ref ref="FILE" />
 	</root>
 
 	<logger name="org.hibernate" level="OFF" />

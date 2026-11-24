@@ -28,9 +28,9 @@ public class T_Log {
 		if (LOGGER != null) {
 			if (debug || showCritical) {
 				if (!testing) {
-					doLog(message, throwable);
+					doLogError(message, throwable);
 				} else {
-					doSyncroLog(message, throwable);
+					doSyncroLogError(message, throwable);
 				}
 			}
 		} else {
@@ -43,9 +43,9 @@ public class T_Log {
 			if (debug || showCritical) {
 				if (showIgnored || !ignored) {
 					if (!testing) {
-						doLog(message, throwable);
+						doLogWarn(message, throwable);
 					} else {
-						doSyncroLog(message, throwable);
+						doSyncroLogWarn(message, throwable);
 					}
 				}
 			}
@@ -60,5 +60,21 @@ public class T_Log {
 
 	private static synchronized void doSyncroLog(final String message, final Throwable throwable) {
 		LOGGER.info(message, throwable);
+	}
+
+	private static void doLogWarn(final String message, final Throwable throwable) {
+		LOGGER.warn(message, throwable);
+	}
+
+	private static synchronized void doSyncroLogWarn(final String message, final Throwable throwable) {
+		LOGGER.warn(message, throwable);
+	}
+
+	private static void doLogError(final String message, final Throwable throwable) {
+		LOGGER.error(message, throwable);
+	}
+
+	private static synchronized void doSyncroLogError(final String message, final Throwable throwable) {
+		LOGGER.error(message, throwable);
 	}
 }
