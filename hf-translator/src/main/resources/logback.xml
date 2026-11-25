@@ -7,8 +7,7 @@
 	<appender name="CONSOLE"
 		class="ch.qos.logback.core.ConsoleAppender">
 		<encoder charset="UTF-8">
-			<pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} -
-				%msg%n</pattern>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n</pattern>
 		</encoder>
 	</appender>
 
@@ -16,6 +15,9 @@
 	<appender name="FILE"
 		class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<file>${LOG_DIR}/didzapp.log</file>
+		<encoder charset="UTF-8">
+			<pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n</pattern>
+		</encoder>
 
 		<rollingPolicy
 			class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
@@ -32,10 +34,6 @@
 			<totalSizeCap>1GB</totalSizeCap>
 
 		</rollingPolicy>
-		<encoder>
-			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} -
-				%msg%n</pattern>
-		</encoder>
 	</appender>
 
 

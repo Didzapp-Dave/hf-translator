@@ -24,14 +24,14 @@ import didzapp.hf_translator.Translator.Platform;
 
 public class HostMemoryManagemant {
 	private static volatile long memoryLimitBytes = 100L * 1024L * 1024L;// 100-MB default
-	private static volatile double saftyMargin = 0.10; // 10% default
+	private static volatile double saftyMargin = 0.0; // 0% default
 	private static volatile long refreshRate = 3000L;// 3 sec default
 	private static volatile long lastMemoryCheckTimestamp = 0;
 	private static AtomicBoolean autoRefreshMemoryLimits = new AtomicBoolean(
 			false);
-	private final static AtomicLong reservedMemory = new AtomicLong(
+	private final static AtomicLong reservedMemoryBytes = new AtomicLong(
 			0);
-	private static final AtomicLong totalNetMemoryUsage = new AtomicLong(
+	private static final AtomicLong totalMemoryUsage = new AtomicLong(
 			0);
 	private static final AtomicLong totalCompletedTasks = new AtomicLong(
 			0);
@@ -127,6 +127,22 @@ public class HostMemoryManagemant {
 			ThreadMXBean bean = (ThreadMXBean) ManagementFactory.getThreadMXBean();
 			bean.setThreadAllocatedMemoryEnabled(true);
 			return bean;
+		}
+
+		public void putRegisteredThreads(Map<Long, Long> trackedThreadsMap) {
+			trackedThreadsMap.forEach(this.trackedThreads::putIfAbsent);
+		}
+
+		public Map<Long, Long> getRegisteredThreads() {
+			return this.trackedThreads;
+		}
+
+		public void putRegisteredProcesses(Map<Long, Process> trackedProcessesMap) {
+			trackedProcessesMap.forEach(this.trackedProcesses::putIfAbsent);
+		}
+
+		public Map<Long, Process> getRegisteredProcesses() {
+			return this.trackedProcesses;
 		}
 
 		public void registerThread(Thread thread) {
@@ -311,47 +327,35 @@ public class HostMemoryManagemant {
 
 		public void recordUsage(String taskName, long allocatedBytes) {
 			this.totalAllocatedBytes.addAndGet(allocatedBytes);
+			totalMemoryUsage.addAndGet(allocatedBytes);
 			this.executionCount.incrementAndGet();
+			totalCompletedTasks.incrementAndGet();
 			this.maximumAllocatedBytes.accumulateAndGet(allocatedBytes, Math::max);
 			this.minimumAllocatedBytes.accumulateAndGet(allocatedBytes, Math::min);
 			this.averageAllocatedBytes.set(this.totalAllocatedBytes.get() / this.executionCount.get());
-			if (this.totalAllocatedBytes.get() > memoryLimitBytes) {
+			if (this.totalAllocatedBytes.get() > 0.75 * Long.MAX_VALUE) {
 				if (resourceHalvinglock.compareAndSet(false, true)) {
 					try {
-						if (this.totalAllocatedBytes.get() > memoryLimitBytes) {
-							half(taskName);
+						if (this.totalAllocatedBytes.get() > 0.75 * Long.MAX_VALUE) {
+							this.executionCount.set(this.executionCount.get() / 2);
+							this.totalAllocatedBytes.set(this.totalAllocatedBytes.get() / 2);
+							T_Log.log(taskName + ": Memory Usage Variables Halved: Total Executions: " + this.executionCount.get()); //$NON-NLS-1$
+							T_Log.log(taskName + ": Memory Usage Variables Halved: Total Memory Usage MB: " + this.totalAllocatedBytes.get() / (1024L * 1024L)); //$NON-NLS-1$
+							T_Log.log(taskName + ": Memory Usage Minimum MB: " + this.minimumAllocatedBytes.get() / (1024L * 1024L)); //$NON-NLS-1$
+							T_Log.log(taskName + ": Memory Usage Maximum MB: " + this.maximumAllocatedBytes.get() / (1024L * 1024L)); //$NON-NLS-1$
+							T_Log.log(taskName + ": Memory Usage Average MB: " + this.averageAllocatedBytes.get() / (1024L * 1024L)); //$NON-NLS-1$
 						}
 					} finally {
-						T_Log.log(
-								taskName + ": Total Executions: " + this.executionCount //$NON-NLS-1$
-										.get());
-						T_Log.log(
-								taskName + ": Total Memory Usage: " + this.totalAllocatedBytes //$NON-NLS-1$
-										.get());
-						T_Log.log(taskName + ": Memory Usage Minimum: " + this.minimumAllocatedBytes.get()); //$NON-NLS-1$
-						T_Log.log(taskName + ": Memory Usage Maximum: " + this.maximumAllocatedBytes.get()); //$NON-NLS-1$
-						T_Log.log(taskName + ": Memory Usage Average: " + this.averageAllocatedBytes.get()); //$NON-NLS-1$
 						resourceHalvinglock.set(false);
 					}
 				}
+			} else {
+				T_Log.log(taskName + ": Total Executions: " + this.executionCount.get()); //$NON-NLS-1$
+				T_Log.log(taskName + ": Total Memory Usage MB: " + this.totalAllocatedBytes.get() / (1024L * 1024L)); //$NON-NLS-1$
+				T_Log.log(taskName + ": Memory Usage Minimum MB: " + this.minimumAllocatedBytes.get() / (1024L * 1024L)); //$NON-NLS-1$
+				T_Log.log(taskName + ": Memory Usage Maximum MB: " + this.maximumAllocatedBytes.get() / (1024L * 1024L)); //$NON-NLS-1$
+				T_Log.log(taskName + ": Memory Usage Average MB: " + this.averageAllocatedBytes.get() / (1024L * 1024L)); //$NON-NLS-1$
 			}
-		}
-
-		/**
-		 * Helper method to half the incermented and additive variabes
-		 */
-		private void half(String taskName) {
-			this.executionCount.set(this.executionCount.get() / 2);
-			this.totalAllocatedBytes.set(this.totalAllocatedBytes.get() / 2);
-			T_Log.log(
-					taskName + ": Memory Usage Variables Halved: Total Executions: " + this.executionCount //$NON-NLS-1$
-							.get());
-			T_Log.log(
-					taskName + ": Memory Usage Variables Halved: Total Memory Usage: " + this.totalAllocatedBytes //$NON-NLS-1$
-							.get());
-			T_Log.log(taskName + ": Memory Usage Minimum: " + this.minimumAllocatedBytes.get()); //$NON-NLS-1$
-			T_Log.log(taskName + ": Memory Usage Maximum: " + this.maximumAllocatedBytes.get()); //$NON-NLS-1$
-			T_Log.log(taskName + ": Memory Usage Average: " + this.averageAllocatedBytes.get()); //$NON-NLS-1$
 		}
 
 		public long getAverageUsageBytes() {
@@ -380,9 +384,6 @@ public class HostMemoryManagemant {
 	 * available.
 	 */
 	private static TaskHandle tryAcquire(String taskName, long requiredMemoryMB) throws Exception {
-		if (autoRefreshMemoryLimits.get()) {
-			refreshMemoryBudgetIfRequired();
-		}
 		long id = taskIds.incrementAndGet();
 		if (id > 1000000000) {
 			throw new IllegalStateException(
@@ -394,18 +395,13 @@ public class HostMemoryManagemant {
 		} catch (ArithmeticException _) {
 			requiredBytes = Long.MAX_VALUE;
 		}
-		if (requiredBytes < 0 || requiredBytes > memoryLimitBytes) {
-			return null;
-		}
-		while (true) {
-			long current = reservedMemory.get();
-			if (requiredBytes > memoryLimitBytes - current) {
-				return null;
-			}
-			if (reservedMemory.compareAndSet(current, current + requiredBytes)) {
-				break;
-			}
-		}
+		/*
+		 * if (requiredBytes < 0 || requiredBytes > memoryLimitBytes) { return null; }
+		 * while (true) { long current = reservedMemoryBytes.get(); if (requiredBytes >
+		 * memoryLimitBytes - current) { return null; } if
+		 * (reservedMemoryBytes.compareAndSet(current, current + requiredBytes)) {
+		 * break; } }
+		 */
 		TaskReservation reservation = new TaskReservation(
 				id,
 				taskName,
@@ -416,31 +412,10 @@ public class HostMemoryManagemant {
 	}
 
 	/**
-	 * Refresh memory limits if after refresh time.
-	 */
-	private static void refreshMemoryBudgetIfRequired() {
-		long now = System.currentTimeMillis();
-		if (refreshRate > 0) {
-			if (now - lastMemoryCheckTimestamp < refreshRate) {
-				return;
-			}
-			synchronized (memoryCheckLock) {
-				now = System.currentTimeMillis();
-				if (now - lastMemoryCheckTimestamp >= refreshRate) {
-					long recommendedMB = getRecommendedMemoryBudgetMB();
-					memoryLimitBytes = recommendedMB * 1024L * 1024L;
-					lastMemoryCheckTimestamp = System.currentTimeMillis();
-				}
-			}
-		}
-	}
-
-	/**
 	 * Record task's memory usage.
 	 */
 	private static void recordTaskUsage(String taskName, long allocatedBytes) {
-		HostMemoryManagemant.taskStatistics.computeIfAbsent(taskName, _ -> new TaskStatistics())
-				.recordUsage(taskName, allocatedBytes);
+		HostMemoryManagemant.taskStatistics.computeIfAbsent(taskName, _ -> new TaskStatistics()).recordUsage(taskName, allocatedBytes);
 	}
 
 	/**
@@ -448,7 +423,7 @@ public class HostMemoryManagemant {
 	 */
 	private static void release(TaskReservation reservation) {
 		if (activeTasks.remove(Long.valueOf(reservation.id)) != null) {
-			reservedMemory.addAndGet(-reservation.memoryBytes);
+			// reservedMemoryBytes.addAndGet(-reservation.memoryBytes);
 		}
 	}
 
@@ -491,6 +466,14 @@ public class HostMemoryManagemant {
 	}
 
 	/**
+	 * Returns JVM comitted memory.
+	 */
+	public static long getJvmComittedMemoryMB() {
+		Runtime runtime = Runtime.getRuntime();
+		return (runtime.totalMemory() / (1024L * 1024L));
+	}
+
+	/**
 	 * Returns remaining JVM heap capacity.
 	 */
 	public static long getJvmAvailableMemoryMB() {
@@ -499,15 +482,17 @@ public class HostMemoryManagemant {
 
 	/**
 	 * Returns the recommended memory budget in MB, based on host and JVM
-	 * availability.
+	 * availability while preserving the configured safety margin.
 	 */
 	public static long getRecommendedMemoryBudgetMB() {
 		long hostAvailable = getHostAvailableMemoryMB();
 		long jvmAvailable = getJvmAvailableMemoryMB();
-		long available = Math.min(hostAvailable, jvmAvailable);
-		long budget = (long) (available + (saftyMargin * available));
+		long available = Math.max(0L, Math.min(hostAvailable, jvmAvailable));
+		double margin = Math.max(0.0, Math.min(1.0, saftyMargin));
+		long budget = (long) (available * (1.0 - margin));
+		T_Log.log("Host Available Memory MB: " + hostAvailable); //$NON-NLS-1$
+		T_Log.log("JVM Available Memory MB: " + jvmAvailable); //$NON-NLS-1$
 		T_Log.log("Recommended Memory Budget MB: " + budget); //$NON-NLS-1$
-		// Keep safty margin available.
 		return budget;
 	}
 
@@ -515,14 +500,14 @@ public class HostMemoryManagemant {
 	 * Returns currently reserved memory.
 	 */
 	public static long getReservedMemoryMB() {
-		return reservedMemory.get() / (1024L * 1024L);
+		return reservedMemoryBytes.get() / (1024L * 1024L);
 	}
 
 	/**
 	 * Returns remaining memory budget.
 	 */
 	public static long getAvailableMemoryMB() {
-		return (memoryLimitBytes - reservedMemory.get()) / (1024L * 1024L);
+		return (memoryLimitBytes - reservedMemoryBytes.get()) / (1024L * 1024L);
 	}
 
 	/**
@@ -590,16 +575,19 @@ public class HostMemoryManagemant {
 	 * @param <T>
 	 */
 	public static void execute(String taskName, long memoryAllocationOverride, final TaskAction<TaskHandle> action) throws Exception {
+		if (autoRefreshMemoryLimits.get()) {
+			refreshMemoryBudgetIfRequired();
+		}
 		long reserve = memoryAllocationOverride > -1 ? memoryAllocationOverride : getAverageTaskUsageMB(taskName);
 		if (reserve > 0) {
-			long remaining = memoryLimitBytes - reservedMemory.get();
-			long margin = (long) (saftyMargin * reserve);
-			reserve = Math.min(remaining, (reserve + margin));
+			long remaining = memoryLimitBytes - reservedMemoryBytes.get();
+			long margin = (long) Math.max(0.0, Math.min(1.0, saftyMargin));
+			reserve = (long) Math.min(remaining, (reserve * (1.0 - margin)));
 		}
-		T_Log.log("Requested Memory Reserve MB: " + reserve); //$NON-NLS-1$
+		T_Log.log("Requested Memory MB: " + reserve); //$NON-NLS-1$
+		T_Log.log("Reserved Memory MB: " + reservedMemoryBytes.get() / (1024L * 1024L)); //$NON-NLS-1$
 		try (TaskHandle handle = tryAcquire(taskName, reserve)) {
 			if (handle == null) {
-				T_Log.log("Detected Memory Budget MB: " + getRecommendedMemoryBudgetMB()); //$NON-NLS-1$
 				throw new IllegalStateException(
 						"Insufficient Resources For Task: " + taskName); //$NON-NLS-1$
 			}
@@ -610,31 +598,57 @@ public class HostMemoryManagemant {
 				handle.unregisterThread(Thread.currentThread());
 				long allocatedBytes = handle.getTotalAllocatedBytes();
 				recordTaskUsage(taskName, allocatedBytes);
-				if (totalNetMemoryUsage.get() > memoryLimitBytes) {
+				if (totalMemoryUsage.get() > 0.75 * Long.MAX_VALUE) {
 					if (resourceHalvinglock.compareAndSet(false, true)) {
 						try {
-							if (totalNetMemoryUsage.get() > memoryLimitBytes) {
-								half();
+							if (totalMemoryUsage.get() > 0.75 * Long.MAX_VALUE) {
+								totalCompletedTasks.set(totalCompletedTasks.get() / 2);
+								totalMemoryUsage.set(totalMemoryUsage.get() / 2);
+								T_Log.log("Memory Usage Variables Halved: Total Net Executed Tasks: " + totalCompletedTasks.get()); //$NON-NLS-1$
+								T_Log.log("Memory Usage Variables Halved: Total Net JVM Memory Usage MB: " + totalMemoryUsage.get() / (1024L * 1024L)); //$NON-NLS-1$
 							}
 						} finally {
-							T_Log.log("Total Net Executed Tasks: " + totalCompletedTasks.get()); //$NON-NLS-1$
-							T_Log.log("Total Net JVM Memory Usage: " + totalNetMemoryUsage.get()); //$NON-NLS-1$
 							resourceHalvinglock.set(false);
 						}
 					}
+				} else {
+					T_Log.log(taskName + " Allocated To Task MB: " + allocatedBytes / (1024L * 1024L)); //$NON-NLS-1$
+					T_Log.log("Total Net Executed Tasks: " + totalCompletedTasks.get()); //$NON-NLS-1$
+					T_Log.log("Total Net JVM Memory Usage MB: " + totalMemoryUsage.get() / (1024L * 1024L)); //$NON-NLS-1$
 				}
 			}
 		}
 	}
 
 	/**
-	 * Helper method to half the incermented and additive variabes
+	 * Refresh memory limits if after refresh time.
 	 */
-	private static void half() {
-		totalCompletedTasks.set(totalCompletedTasks.get() / 2);
-		totalNetMemoryUsage.set(totalNetMemoryUsage.get() / 2);
-		T_Log.log("Memory Usage Variables Halved: Total Net Executed Tasks: " + totalCompletedTasks.get()); //$NON-NLS-1$
-		T_Log.log("Memory Usage Variables Halved: Total Net JVM Memory Usage: " + totalNetMemoryUsage.get()); //$NON-NLS-1$
+	private static void refreshMemoryBudgetIfRequired() {
+		long now = System.currentTimeMillis();
+		if (refreshRate > 0) {
+			if (now - lastMemoryCheckTimestamp < refreshRate) {
+				return;
+			}
+			synchronized (memoryCheckLock) {
+				if (T_Log.debug) {
+					T_Log.log("========== MEMORY DIAGNOSTICS =========="); //$NON-NLS-1$
+					T_Log.log("Host Total MB: " + getHostTotalMemoryMB()); //$NON-NLS-1$
+					T_Log.log("Host Free MB: " + getHostAvailableMemoryMB()); //$NON-NLS-1$
+					T_Log.log("JVM Maximum MB: " + getJvmMaximumMemoryMB()); //$NON-NLS-1$
+					T_Log.log("JVM Committed MB: " + getJvmComittedMemoryMB()); //$NON-NLS-1$
+					T_Log.log("JVM Used MB: " + getJvmUsedMemoryMB()); //$NON-NLS-1$
+					T_Log.log("JVM Available MB: " + getJvmAvailableMemoryMB()); //$NON-NLS-1$
+					T_Log.log("Total Executed Tasks: " + totalCompletedTasks.get()); //$NON-NLS-1$
+					T_Log.log("Total Memory Used MB: " + totalMemoryUsage.get() / (1024L * 1024L)); //$NON-NLS-1$
+				}
+				now = System.currentTimeMillis();
+				if (now - lastMemoryCheckTimestamp >= refreshRate) {
+					long recommendedMB = getRecommendedMemoryBudgetMB();
+					memoryLimitBytes = recommendedMB * 1024L * 1024L;
+					lastMemoryCheckTimestamp = System.currentTimeMillis();
+				}
+			}
+		}
 	}
 
 	/**

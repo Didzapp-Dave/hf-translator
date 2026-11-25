@@ -139,10 +139,7 @@ public class Translator {
 	 *         languages except the disabled ones.
 	 */
 	public static String[] getSelectedAndWorkingLanguagesAsTags() {
-		return selectedLanguages.stream()
-				.filter(locale -> !disabledLanguages.contains(locale))
-				.map(Locale::toLanguageTag)
-				.toArray(String[]::new);
+		return selectedLanguages.stream().filter(locale -> !disabledLanguages.contains(locale)).map(Locale::toLanguageTag).toArray(String[]::new);
 	}
 
 	/**
@@ -152,10 +149,7 @@ public class Translator {
 	 *         languages except the disabled ones.
 	 */
 	public static String[] getSelectedAndWorkingLanguageNames(final Locale displayLocale) {
-		return selectedLanguages.stream()
-				.filter(locale -> !disabledLanguages.contains(locale))
-				.map(locale -> locale.getDisplayName(displayLocale))
-				.toArray(String[]::new);
+		return selectedLanguages.stream().filter(locale -> !disabledLanguages.contains(locale)).map(locale -> locale.getDisplayName(displayLocale)).toArray(String[]::new);
 	}
 
 	/**
@@ -165,10 +159,7 @@ public class Translator {
 	 *         languages except the disabled ones.
 	 */
 	public static String[] getSelectedAndWorkingLanguageTranslatedNames() {
-		return selectedLanguages.stream()
-				.filter(locale -> !disabledLanguages.contains(locale))
-				.map(locale -> locale.getDisplayName(locale))
-				.toArray(String[]::new);
+		return selectedLanguages.stream().filter(locale -> !disabledLanguages.contains(locale)).map(locale -> locale.getDisplayName(locale)).toArray(String[]::new);
 	}
 
 	/**
@@ -415,8 +406,7 @@ public class Translator {
 			if (!framework.equals(DetectionUtils.Framework.NONE)) {
 				database = DetectionUtils.detectDatabase();
 			}
-			if (framework.equals(DetectionUtils.Framework.MONGODB)
-					|| (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE))) {
+			if (framework.equals(DetectionUtils.Framework.MONGODB) || (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE))) {
 				if (framework_object == null) {
 					getDatabaseManagement().init(config_path_or_string != null ? config_path_or_string : null);
 				} else {
@@ -473,8 +463,7 @@ public class Translator {
 			}
 			//
 			//
-			if (framework.equals(DetectionUtils.Framework.MONGODB)
-					|| (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE))) {
+			if (framework.equals(DetectionUtils.Framework.MONGODB) || (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE))) {
 				if (translation_reset) {
 					getDatabaseManagement().deleteAllTranslations();
 				} else {
@@ -486,8 +475,7 @@ public class Translator {
 			//
 			runningMaintenance = false;
 			//
-			if (feed_content && (framework.equals(DetectionUtils.Framework.MONGODB)
-					|| (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE)))) {
+			if (feed_content && (framework.equals(DetectionUtils.Framework.MONGODB) || (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE)))) {
 				final TranslateStacker translateStacker = new TranslateStacker();
 				if ((content_classes != null) && (content_classes.length > 0)) {
 					for (final Class<?> clazz : content_classes) {
@@ -567,8 +555,7 @@ public class Translator {
 			//
 			runningMaintenance = true;
 			//
-			if (framework.equals(DetectionUtils.Framework.MONGODB)
-					|| (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE))) {
+			if (framework.equals(DetectionUtils.Framework.MONGODB) || (!framework.equals(DetectionUtils.Framework.NONE) && !database.equals(DetectionUtils.Database.NONE))) {
 				getDatabaseManagement().deleteUnusedTranslations();
 				getDatabaseManagement().deleteDuplicateTranslations();
 			}
@@ -584,9 +571,9 @@ public class Translator {
 	 * Shuts Down Translator: Sessions, Executors and models...Everything.
 	 *
 	 */
-	public static synchronized void shutdown() {
+	public static synchronized void shutdown(TaskHandle taskHandle) {
 		new HibernateTranslatorEntity().shutdown();
-		closeLanguageDetectorService();
+		closeLanguageDetectorService(taskHandle);
 	}
 
 	/**
@@ -611,9 +598,7 @@ public class Translator {
 		final String finalLangIN = langIN.getLanguage();
 		final String finaLangOUT = langOUT.getLanguage();
 		if (toTranslate) {
-			return Paths.get(
-					languageModelFolder
-							.getPath() + "/opus-mt-" + finalLangIN + "-" + finaLangOUT + "/" + ToPyFiles.generatedModelFolder); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			return Paths.get(languageModelFolder.getPath() + "/opus-mt-" + finalLangIN + "-" + finaLangOUT + "/" + ToPyFiles.generatedModelFolder); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 		}
 		return Paths.get(languageModelFolder.getPath() + "/opus-mt-" + finalLangIN + "-" + finaLangOUT); //$NON-NLS-1$ //$NON-NLS-2$
 	}
@@ -801,6 +786,8 @@ public class Translator {
 				stderrThread.start();
 				stdoutThread.join();
 				stderrThread.join();
+				taskHandle.unregisterThread(stdoutThread);
+				taskHandle.unregisterThread(stderrThread);
 				final int exit = p.waitFor();
 				if (exit != 0) {
 					T_Log.log("CTranslate2 Translation Failed, Exit Code: " + exit); //$NON-NLS-1$
@@ -851,12 +838,10 @@ public class Translator {
 						"Checking Compatablity For: " + Locale.forLanguageTag(langBridgeCode) //$NON-NLS-1$
 								.getDisplayName(defaultLanguage) + " To " + langOUT //$NON-NLS-1$
 										.getDisplayName(defaultLanguage));
-				if ((languagesLinks.get(langBridgeCode) == null)
-						|| !languagesLinks.get(langBridgeCode).contains(langOUT.getLanguage())) {
+				if ((languagesLinks.get(langBridgeCode) == null) || !languagesLinks.get(langBridgeCode).contains(langOUT.getLanguage())) {
 					T_Log.log(
-							Locale.forLanguageTag(langBridgeCode)
-									.getDisplayName(defaultLanguage) + " Is Not Compatable With " + langOUT //$NON-NLS-1$
-											.getDisplayName(defaultLanguage));
+							Locale.forLanguageTag(langBridgeCode).getDisplayName(defaultLanguage) + " Is Not Compatable With " + langOUT //$NON-NLS-1$
+									.getDisplayName(defaultLanguage));
 					continue;
 				}
 				T_Log.log(
@@ -910,14 +895,15 @@ public class Translator {
 						stderrThread.start();
 						stdoutThread.join();
 						stderrThread.join();
+						taskHandle.unregisterThread(stdoutThread);
+						taskHandle.unregisterThread(stderrThread);
 						final int exit = p.waitFor();
 						if (exit != 0) {
 							T_Log.log("CTranslate2 Translation Bridge Failed, Exit Code: " + exit); //$NON-NLS-1$
 							return null;
 						}
-						final String jsonInput = new ObjectMapper().writeValueAsString(
-								new ObjectMapper().readValue(output.toString(), new TypeReference<List<String>>() {
-									/* null */}));
+						final String jsonInput = new ObjectMapper().writeValueAsString(new ObjectMapper().readValue(output.toString(), new TypeReference<List<String>>() {
+							/* null */}));
 						final String encoded = Base64.getEncoder().encodeToString(jsonInput.getBytes(StandardCharsets.UTF_8));
 						return new BridgeContainer(
 								Locale.forLanguageTag(langBridgeCode),
@@ -1012,6 +998,9 @@ public class Translator {
 				stdoutThread.join();
 				stderrThread.join();
 				stdinThread.join();
+				taskHandle.unregisterThread(stdoutThread);
+				taskHandle.unregisterThread(stderrThread);
+				taskHandle.unregisterThread(stdinThread);
 				final int exit = p.waitFor();
 				if (exit != 0) {
 					T_Log.log("Language Detector Failed, Exit Code: " + exit); //$NON-NLS-1$
@@ -1087,8 +1076,8 @@ public class Translator {
 										T_Log.log("LanguageDetector Failed At STDERR THREAD: ", ignored, true); //$NON-NLS-1$
 									}
 								});
-						thread.start();
 						taskHandle.registerThread(thread);
+						thread.start();
 					}
 				} catch (final Exception e) {
 					T_Log.log("Failed To Start Persistent Language Detector", e); //$NON-NLS-1$
@@ -1103,7 +1092,7 @@ public class Translator {
 				persistentWriter.flush();
 				final String jsonLine = persistentReader.readLine();
 				if (jsonLine == null) {
-					closeLanguageDetectorService();
+					closeLanguageDetectorService(taskHandle);
 					return detectLanguage(taskHandle, input);
 				}
 				final String topLangCode = jsonLine.trim();
@@ -1128,7 +1117,7 @@ public class Translator {
 	 *
 	 *
 	 */
-	private static void closeLanguageDetectorService() {
+	private static void closeLanguageDetectorService(TaskHandle taskHandle) {
 		synchronized (processLock) {
 			try {
 				if (persistentWriter != null) {
@@ -1154,6 +1143,7 @@ public class Translator {
 				try {
 					thread.interrupt();
 					thread.join();
+					taskHandle.registerThread(thread);
 				} catch (final InterruptedException ignored) {
 					Thread.currentThread().interrupt();
 					T_Log.log("Error Closing Thread: ", ignored, true); //$NON-NLS-1$
@@ -1170,33 +1160,18 @@ public class Translator {
 	 */
 	private static void exportPYFiles() {
 		try {
-			if ((scriptFileGenerate == null) || !scriptFileGenerate.exists() || (scriptFileTranslate == null)
-					|| !scriptFileTranslate.exists()
+			if ((scriptFileGenerate == null) || !scriptFileGenerate.exists() || (scriptFileTranslate == null) || !scriptFileTranslate.exists()
 					|| !sha512(Files.readString(scriptFileGenerate.toPath(), StandardCharsets.UTF_8)).equals(hashFileGenerate)
-					|| !sha512(Files.readString(scriptFileTranslate.toPath(), StandardCharsets.UTF_8))
-							.equals(hashFileTranslate)) {
-				scriptFileGenerate = Extract.ToFileSystem.fromClassPathContext(
-						HibernateTranslatorEntity.class,
-						languageModelFolder.getTempPath(),
-						ToPyFiles.generateModelPY,
-						ToPyFiles.generateModelPYName,
-						ToPyFiles.pythonSuffix);
+					|| !sha512(Files.readString(scriptFileTranslate.toPath(), StandardCharsets.UTF_8)).equals(hashFileTranslate)) {
+				scriptFileGenerate = Extract.ToFileSystem
+						.fromClassPathContext(HibernateTranslatorEntity.class, languageModelFolder.getTempPath(), ToPyFiles.generateModelPY, ToPyFiles.generateModelPYName, ToPyFiles.pythonSuffix);
 				hashFileGenerate = sha512(Files.readString(scriptFileGenerate.toPath(), StandardCharsets.UTF_8));
-				scriptFileTranslate = Extract.ToFileSystem.fromClassPathContext(
-						HibernateTranslatorEntity.class,
-						languageModelFolder.getTempPath(),
-						ToPyFiles.translatePY,
-						ToPyFiles.translatePYName,
-						ToPyFiles.pythonSuffix);
+				scriptFileTranslate = Extract.ToFileSystem
+						.fromClassPathContext(HibernateTranslatorEntity.class, languageModelFolder.getTempPath(), ToPyFiles.translatePY, ToPyFiles.translatePYName, ToPyFiles.pythonSuffix);
 				hashFileTranslate = sha512(Files.readString(scriptFileTranslate.toPath(), StandardCharsets.UTF_8));
 				scriptFileDetectLanguage = Extract.ToFileSystem.fromClassPathContext(
 						HibernateTranslatorEntity.class,
-						Extract.ToFileSystem
-								.fromClassPathContext(
-										HibernateTranslatorEntity.class,
-										languageModelFolder.getPath(),
-										ToPyFiles.conLID_Folder)
-								.getAbsolutePath(),
+						Extract.ToFileSystem.fromClassPathContext(HibernateTranslatorEntity.class, languageModelFolder.getPath(), ToPyFiles.conLID_Folder).getAbsolutePath(),
 						ToPyFiles.conLIDPY,
 						ToPyFiles.conLIDPYName,
 						ToPyFiles.pythonSuffix);
@@ -1533,8 +1508,7 @@ public class Translator {
 				// Get the directory where the JAR is located
 				Path jarDir;
 				try {
-					jarDir = Path.of(HibernateTranslatorEntity.class.getProtectionDomain().getCodeSource().getLocation().toURI())
-							.getParent();
+					jarDir = Path.of(HibernateTranslatorEntity.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParent();
 					final Path baseDir = jarDir.resolve(flatpickrResourcePath);
 					// Now use baseDir for saving files
 					Files.createDirectories(baseDir);
@@ -1759,13 +1733,8 @@ public class Translator {
 		 */
 		@SuppressWarnings("unchecked")
 		public <T> Map<T, String> translate(TaskHandle taskHandle, final Locale from, final Locale to) {
-			final Map<T, String> results = (Map<T, String>) Translator.translate(
-					taskHandle,
-					from != null ? from : defaultLanguage,
-					to,
-					this.getCombinedList(),
-					this.doAsList,
-					this.redoTranslationsInTableStacker);
+			final Map<T, String> results = (Map<T, String>) Translator
+					.translate(taskHandle, from != null ? from : defaultLanguage, to, this.getCombinedList(), this.doAsList, this.redoTranslationsInTableStacker);
 			return results;
 		}
 
@@ -1795,12 +1764,7 @@ public class Translator {
 		 */
 		@SuppressWarnings("unchecked")
 		public <T> Map<T, String> translate_ModelOnly(TaskHandle taskHandle, final Locale from, final Locale to) {
-			final Map<T, String> results = (Map<T, String>) Translator.translate_OnlyUseModel(
-					taskHandle,
-					from != null ? from : defaultLanguage,
-					to,
-					this.getCombinedList(),
-					this.doAsList);
+			final Map<T, String> results = (Map<T, String>) Translator.translate_OnlyUseModel(taskHandle, from != null ? from : defaultLanguage, to, this.getCombinedList(), this.doAsList);
 			return results;
 		}
 
@@ -1835,31 +1799,20 @@ public class Translator {
 		@SuppressWarnings("unchecked")
 		public <T> Map<T, String> translateAndFeedTranslatorDatabase(TaskHandle taskHandle, final Locale from, final Locale to) {
 			Map<T, String> result = new LinkedHashMap<>();
-			result = (Map<T, String>) Translator.translate(
-					taskHandle,
-					from != null ? from : defaultLanguage,
-					to,
-					this.getCombinedList(),
-					this.doAsList,
-					this.redoTranslationsInTableStacker);
+			result = (Map<T, String>) Translator.translate(taskHandle, from != null ? from : defaultLanguage, to, this.getCombinedList(), this.doAsList, this.redoTranslationsInTableStacker);
 			Thread t = new Thread(
 					() -> {
 						T_Log.log("Feeding Translator In New Thread"); //$NON-NLS-1$
 						for (final Locale l : languageInUseFirst(getSelectedAndWorkingLanguages(), to)) {
 							if ((!l.equals(getDefaultSystemLanguage()) && (!l.equals(to)))) {
-								Translator.translate(
-										taskHandle,
-										from != null ? from : defaultLanguage,
-										l,
-										this.getCombinedList(),
-										this.doAsList,
-										this.redoTranslationsInTableStacker);
+								Translator.translate(taskHandle, from != null ? from : defaultLanguage, l, this.getCombinedList(), this.doAsList, this.redoTranslationsInTableStacker);
 							}
 						}
 						T_Log.log("Finished Feeding Translator, Thread Terminated"); //$NON-NLS-1$
+						taskHandle.unregisterThread(Thread.currentThread());
 					});
-			thread.start();
 			taskHandle.registerThread(t);
+			t.start();
 			return result;
 		}
 
@@ -1870,13 +1823,7 @@ public class Translator {
 		public void feedTranslatorDatabase(TaskHandle taskHandle) {
 			for (final Locale l : getSelectedAndWorkingLanguages()) {
 				if (!l.equals(getDefaultSystemLanguage())) {
-					Translator.translate(
-							taskHandle,
-							defaultLanguage,
-							l,
-							this.getCombinedList(),
-							this.doAsList,
-							this.redoTranslationsInTableStacker);
+					Translator.translate(taskHandle, defaultLanguage, l, this.getCombinedList(), this.doAsList, this.redoTranslationsInTableStacker);
 				}
 			}
 		}
@@ -2094,23 +2041,11 @@ public class Translator {
 					}
 					final Map<T, String> foundResults = tSearchResult.found;
 					if (doAsList) {
-						final Map<T, String> missingResults = (Map<T, String>) doAsList(
-								taskHandle,
-								langIN,
-								to,
-								modelCode,
-								tSearchResult.missing,
-								true);
+						final Map<T, String> missingResults = (Map<T, String>) doAsList(taskHandle, langIN, to, modelCode, tSearchResult.missing, true);
 						foundResults.putAll(missingResults);
 						return foundResults;
 					}
-					final Map<T, String> missingResults = (Map<T, String>) doAsStrings(
-							taskHandle,
-							langIN,
-							to,
-							modelCode,
-							tSearchResult.missing,
-							true);
+					final Map<T, String> missingResults = (Map<T, String>) doAsStrings(taskHandle, langIN, to, modelCode, tSearchResult.missing, true);
 					foundResults.putAll(missingResults);
 					return foundResults;
 				}
@@ -2416,8 +2351,7 @@ public class Translator {
 						if (key.isBlank()) {
 							continue;
 						}
-						final String output = ((outputs.get(i) != null) && !outputs.get(i).isBlank()) ? outputs
-								.get(i) : "Model_Translation_Failed"; //$NON-NLS-1$
+						final String output = ((outputs.get(i) != null) && !outputs.get(i).isBlank()) ? outputs.get(i) : "Model_Translation_Failed"; //$NON-NLS-1$
 						final String formatted = output;
 						results.putIfAbsent(inputs.get(i), formatted);
 						if (doTranslation) {
@@ -2780,8 +2714,7 @@ public class Translator {
 	public static String formatTimestamp(final Locale language, final String timestamp) {
 		// First, parse into LocalDateTime using the known format of
 		// Timestamp.toString()
-		final DateTimeFormatter parser = DateTimeFormatter
-				.ofPattern("yyyy-MM-dd HH:mm:ss[.[SSSSSSSSS][SSSSSSSS][SSSSSSS][SSSSSS][SSSSS][SSSS][SSS][SS][S]]"); //$NON-NLS-1$
+		final DateTimeFormatter parser = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.[SSSSSSSSS][SSSSSSSS][SSSSSSS][SSSSSS][SSSSS][SSSS][SSS][SS][S]]"); //$NON-NLS-1$
 		final LocalDateTime dateTime = LocalDateTime.parse(timestamp, parser);
 		return formatLocalDateTime(language, dateTime);
 	}
